@@ -1,30 +1,34 @@
 ﻿. "$PSScriptRoot\CopyFile.ps1"
 
 <#
-Example:
+.SYNOPSIS
+    依據暫存目錄結構進行檔案備份與結果紀錄
+
+.DESCRIPTION
+    1. 以 $TempPath 內部的檔案目錄結構作為比對範本
+    2. 從 $SourcePath 尋找對應路徑的原始檔案
+    3. 若檔案存在，則備份至 $TargetPath 並維持原有資料夾層級
+    4. 自動呼叫 GenCopyResult 將備份結果（成功、遺失、錯誤）輸出至目標目錄
+
+.PARAMETER TempPath
+    [String] 作為比對基準的暫存資料夾，決定要備份哪些檔案的範本結構
+
+.PARAMETER SourcePath
+    [String] 實際原始檔案的存放位置，即備份來源地
+
+.PARAMETER TargetPath
+    [String] 備份檔案的存放目標位置，同時也是執行結果紀錄檔的輸出路徑
+
+.EXAMPLE
     $pathMappingParams = @{
         TempPath   = "D:\Release\20260101\WebRoot"
         SourcePath = "D:\WebRoot"
         TargetPath = "D:\Backup\20260101\WebRoot"
     }
-
     BackupFileByTemp @pathMappingParams
 
-Description:
-    以Temp資料夾取得檔案目錄結構並備份Source資料夾至Backup資料夾
-
-    1. 以 $TempPath 內部的檔案目錄結構作為「比對範本」
-    2. 到 $SourcePath 尋找與範本路徑相同的原始檔案
-    3. 若存在，則將該檔案備份至 $TargetPath，並保持原有的資料夾層級
-    4. 輸出結果到$TargetPath
-
-ParameterDesc:
-    $TempPath
-        作為比對基準的暫存資料夾（用來決定「要備份哪些檔案」的 Schema）
-    $SourcePath
-        存放實際原始檔案的資料夾（備份的來源地）
-    $TargetPath
-        存放備份結果的目標資料夾
+.NOTES
+    此函式內部依賴 GetBackupPathMapping、CopyFile 與 GenCopyResult 三個自定義函式進行作業
 #>
 function BackupFileByTemp {
     param (
@@ -54,19 +58,34 @@ function BackupFileByTemp {
 }
 
 <#
-Description:
-    以Temp資料夾取得檔案目錄結構並輸出複製檔案清單
+.SYNOPSIS
+    依據暫存目錄結構產生來源與目標路徑的對應清單
 
-ParameterDesc:
-    $TempPath
-        作為比對基準的暫存資料夾（用來決定「要備份哪些檔案」的 Schema）
-    $SourcePath
-        存放實際原始檔案的資料夾（備份的來源地）
-    $TargetPath
-        存放備份結果的目標資料夾
+.DESCRIPTION
+    1. 遍歷 $TempPath 內的所有檔案作為比對基準
+    2. 透過字串替換邏輯，將 $TempPath 的相對路徑映射至 $SourcePath 與 $TargetPath
+    3. 產出一份預計執行的複製路徑清單，供後續備份作業使用
 
-ReturnDesc:
-    格式:[二維陣列]第一個為來源檔案路徑，第二個為目標檔案路徑
+.PARAMETER TempPath
+    [String] 作為基準的暫存資料夾路徑，定義「哪些檔案」需要被處理
+
+.PARAMETER SourcePath
+    [String] 原始檔案的實際存放目錄
+
+.PARAMETER TargetPath
+    [String] 預計備份到的目標目錄
+
+.OUTPUTS
+    [Object[][]] 二維陣列格式的複製清單
+    格式：@(@("來源檔案路徑", "目標檔案路徑"), ...)
+
+.EXAMPLE
+    $params = @{
+        TempPath   = "C:\Temp\Update"
+        SourcePath = "C:\Live\App"
+        TargetPath = "D:\Backup\App"
+    }
+    $Mapping = GetBackupPathMapping @params
 #>
 function GetBackupPathMapping{
     param (

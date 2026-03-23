@@ -1,15 +1,26 @@
 ﻿<#
-Description:
-    批次切換清單中的Repo到指定Branch
+.SYNOPSIS
+    批次切換多個 Git 儲存庫的分支並同步更新
 
-ParameterDesc:
-    $TargetBranch
-        設定目標分支 (例如: "main" or "master" or "hotfix")
-        格式:[字串]
+.DESCRIPTION
+    1. 檢查目標路徑是否為有效的 Git 儲存庫（是否存在 .git 資料夾）
+    2. 自動偵測未提交的改動，若有改動則執行 git stash 暫存以確保切換安全
+    3. 切換至目標分支（TargetBranch）並執行 git pull 同步遠端最新狀態
+    4. 若先前有暫存改動，切換完成後會自動執行 git stash pop 嘗試還原
+    5. 包含錯誤處理機制，確保單一 Repo 失敗時不會中斷整個批次流程
 
-    $RepoPaths
-        需要切換到指定branch的repo
-        格式:[陣列]Repo路徑
+.PARAMETER RepoPaths
+    [String[]] 需要進行分支切換的 Git 儲存庫本地路徑清單
+
+.PARAMETER TargetBranch
+    [String] 目標分支名稱（例如：main、master 或 hotfix）
+
+.EXAMPLE
+    $Repos = @("C:\Projects\Api", "C:\Projects\Web")
+    BatchSwitchBranch -RepoPaths $Repos -TargetBranch "develop"
+
+.NOTES
+    若 git stash pop 發生衝突，程式會顯示警告訊息，此時需手動介入處理衝突
 #>
 function BatchSwitchBranch{
     param (

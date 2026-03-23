@@ -1,40 +1,32 @@
 ﻿<#
-Example:
+.SYNOPSIS
+    批次複製檔案並追蹤執行結果
 
-$CopyFileList = @()
+.DESCRIPTION
+    此函式接收一個二維陣列的檔案清單，執行複製動作後，會分類並回傳成功、找不到檔案及執行錯誤的詳細清單
 
-$CopyFileList += ,@("C:\Data\File1.txt", "C:\Backup\Data\File1.txt")
-$CopyFileList += ,@("C:\Data\File2.txt", "C:\Backup\Data\File2.txt")
-$CopyFileList += ,@("C:\Data\NotExists1.txt", "C:\Backup\Data\NotExists1.txt")
-$CopyFileList += ,@("C:/Data/File3.txt", "C:/Backup/Data/File3.txt")
-$CopyFileList += ,@("C:/Data/File4.txt", "C:/Backup/Data/File4.txt")
-$CopyFileList += ,@("C:/Data/NotExists2.txt", "C:/Backup/Data/NotExists2.txt")
+.PARAMETER CopyFileList
+    [二維陣列] 要執行的複製清單
+    格式結構：@(@("來源路徑1", "目標路徑1"), @("來源路徑2", "目標路徑2"))
 
-$CopyResult = CopyFile -CopyFileList $CopyFileList
+.OUTPUTS
+    回傳一個包含以下屬性的物件 (PSCustomObject)：
+    - SuccessFileList: [二維陣列] 成功複製的來源與目標路徑
+    - NotFoundFileList: [一維陣列] 來源路徑不存在的檔案清單
+    - ErrorFileList: [二維陣列] 因權限或其他原因導致失敗的清單
 
-foreach($File in $CopyResult.SuccessFileList){ Write-Host "Success:$($File[0]) => $($File[1])" }
-foreach($File in $CopyResult.NotFoundFileList){ Write-Host "NotFound:$($File)" }
+.EXAMPLE
+    $CopyFileList = @()
+    $CopyFileList += ,@("C:\Data\File1.txt", "C:\Backup\File1.txt")
+    $CopyFileList += ,@("C:\Data\Missing.txt", "C:\Backup\Missing.txt")
 
-Description:
-    複製檔案，並回傳執行結果
+    $CopyResult = CopyFile -CopyFileList $CopyFileList
 
-ParameterDesc:
-    $CopyFileList
-        要複製檔案清單
-        格式:[二維陣列]第一個放來源檔案路徑，第二個放目標檔案路徑
-
-ReturnDesc:
-    $SuccessFileList
-        成功複製清單
-        格式:[二維陣列]第一個為來源檔案路徑，第二個為目標檔案路徑
-
-    $NotFoundFileList
-        找不到檔案清單
-        格式:[陣列]來源檔案路徑(找不到)
-
-    $ErrorFileList
-        錯誤清單
-        格式:[二維陣列]第一個為來源檔案路徑，第二個為目標檔案路徑
+    # 輸出成功結果
+    $CopyResult.SuccessFileList | ForEach-Object { Write-Host "成功: $($[0]) 到 $($[1])" }
+    
+    # 輸出遺失檔案
+    $CopyResult.NotFoundFileList | ForEach-Object { Write-Warning "找不到檔案: $_" }
 #>
 function CopyFile {
     param (
@@ -79,16 +71,31 @@ function CopyFile {
 }
 
 <#
-Description:
-    找到最長路徑並格式化
+.SYNOPSIS
+    尋找檔案清單中的最長路徑並進行格式化輸出
 
-ParameterDesc:
-    $FileList
-        檔案清單
-        格式:[二維陣列]第一個為來源檔案路徑，第二個為目標檔案路徑
+.DESCRIPTION
+    此函式接收一個包含多組路徑的二維陣列，計算並找出字元長度最長的路徑對，
+    並將其轉換為易讀的指定字串格式（[來源] => [目標]）
 
-ReturnDesc:
-    格式:[來源檔案路徑] => [目標檔案路徑]
+.PARAMETER FileList
+    [二維陣列] 包含來源與目標路徑的清單。
+    格式範例：@(@("C:\Source\Path\File.txt", "D:\Backup\Path\File.txt"))
+
+.OUTPUTS
+    [String] 格式化後的字串。
+    輸出樣式：[來源檔案路徑] => [目標檔案路徑]
+
+.EXAMPLE
+    $Files = @(
+        ,@("C:\Short.txt", "D:\Short.txt"),
+        ,@("C:\Very\Long\Path\To\File\Target.txt", "E:\Backup\Target.txt")
+    )
+    GetFormattedLines -FileList $Files
+    # 輸出: C:\Very\Long\Path\To\File\Target.txt => E:\Backup\Target.txt
+
+.NOTES
+    注意：若有多個路徑長度相同，函式預設回傳第一個找到的最長路徑
 #>
 function GetFormattedLines {
     param([object[][]]$FileList)
@@ -105,25 +112,30 @@ function GetFormattedLines {
 }
 
 <#
-Description:
-    輸出複製結果成txt檔至指定位置
+.SYNOPSIS
+    將檔案複製的執行結果分類並匯出為文字檔
 
-ParameterDesc:
-    $SuccessFileList
-        成功複製清單
-        格式:[二維陣列]第一個放來源檔案路徑，第二個放目標檔案路徑
+.DESCRIPTION
+    根據傳入的成功、找不到及錯誤清單，分別在指定目錄下產生 Success.txt、NotFound.txt 與 Error.txt
+    若指定路徑不存在，函式會自動建立目錄
 
-    $NotFoundFileList
-        找不到檔案清單
-        格式:[陣列]來源檔案路徑
+.PARAMETER SuccessFileList
+    [二維陣列] 成功複製的清單
+    格式：@(@("來源路徑", "目標路徑"), ...)
 
-    $ErrorFileList
-        錯誤清單
-        格式:[二維陣列]第一個放來源檔案路徑，第二個放目標檔案路徑
+.PARAMETER NotFoundFileList
+    [陣列] 來源端找不到檔案的清單
+    格式：@("來源路徑1", "來源路徑2", ...)
 
-    $ResultFilePath
-        結果檔案路徑
-        格式:[字串]輸出檔案路徑
+.PARAMETER ErrorFileList
+    [二維陣列] 複製過程中發生錯誤（如權限不足）的清單
+    格式：@(@("來源路徑", "目標路徑"), ...)
+
+.PARAMETER ResultFilePath
+    [字串] 輸出結果檔案的目標目錄路徑。此為強制參數
+
+.EXAMPLE
+    GenCopyResult -SuccessFileList $Success -NotFoundFileList $Missing -ResultFilePath "C:\Logs\CopyReport"
 #>
 function GenCopyResult{
     param (
