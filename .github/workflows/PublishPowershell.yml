@@ -1,0 +1,48 @@
+name: Publish PowerShell Module to GitHub Packages
+
+# 設定觸發條件：當推送到指定分支，且 PowerShell 目錄下的檔案有變動時才執行
+on:
+  push:
+    branches:
+      - Dev/CICD
+    # paths:
+    #   - 'PowerShell/**'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest # 使用 Ubuntu 跑 PowerShell Core (pwsh) 速度最快且免費
+    
+    # 賦予 GITHUB_TOKEN 寫入 Packages 的權限
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 執行建置腳本，自動生成 .psd1 與 .psm1
+      - name: Generate Module Manifest and Nested Modules
+        shell: pwsh
+        run: |
+          ./PowerShell/UpdateManifest.ps1
+
+      # 註冊 GitHub Packages 為 PowerShell 的發布來源
+      - name: Register GitHub PSRepository
+        shell: pwsh
+        run: |
+          $RepoName = "GitHubPackages"
+          $SourceLocation = "https://nuget.pkg.github.com/seanhocode/index.json"
+          
+          Register-PSRepository -Name $RepoName -SourceLocation $SourceLocation -PublishLocation $SourceLocation -InstallationPolicy Trusted
+
+      # 發布模組至 GitHub Packages
+      - name: Publish Module
+        shell: pwsh
+        env:
+          NUGET_KEY: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 指定剛剛生成的 .psd1 路徑
+          $ManifestPath = "./PowerShell/SeanTool.Powershell.psd1"
+          
+          Publish-Module -Path $ManifestPath -Repository "GitHubPackages" -NuGetApiKey $env:NUGET_KEY -Verbose
