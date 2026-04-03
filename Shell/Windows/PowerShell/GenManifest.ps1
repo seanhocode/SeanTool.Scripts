@@ -7,7 +7,7 @@ try {
     $ManifestPath = Join-Path $ModuleDir "SeanTool.Powershell.psd1"
     $Author = "SeanHo"
     $Description = "SeanTool Meta-Module"
-    $Version = "0.0.2"
+    $Version = "0.0.0"
 
     $AllScripts = GetAllPowershellScripts -FolderPath $ModuleDir
 

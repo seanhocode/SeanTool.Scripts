@@ -80,7 +80,7 @@ function BackupFileByTemp {
 .EXAMPLE
     $params = @{
         TempPath   = "C:\Temp\Update"
-        SourcePath = "C:\Live\App"
+        SourcePath = "C:\Deploy\App"
         TargetPath = "D:\Backup\App"
     }
     $Mapping = GetBackupPathMapping @params

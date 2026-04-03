@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'PowerShell/**'
+      - 'Shell/Windows/PowerShell/**'
 
 jobs:
   build-and-publish:
