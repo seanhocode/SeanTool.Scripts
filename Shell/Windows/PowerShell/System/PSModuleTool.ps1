@@ -1,5 +1,3 @@
-$ErrorActionPreference = 'Stop'
-
 <#
 .SYNOPSIS
     自動掃描 PowerShell 原始碼，更新 SeanTool.Powershell.psd1 的 FunctionsToExport 與 NestedModules
@@ -38,7 +36,7 @@ function GetAllPowershellScripts{
 .OUTPUTS
     [string[]] 準備要匯出的 Function 名稱清單（已過濾掉私有函式）
 #>
-function GetAllFunctions{
+function GetAllPowershellFunctions{
     param(
         [Parameter(Mandatory = $true)] [array]$Scripts
     )
@@ -87,7 +85,8 @@ function GetAllFunctions{
 #>
 function GetNestedModulesList{
     param(
-        [Parameter(Mandatory = $true)] [string]$ModuleDir
+        [Parameter(Mandatory = $true)] [string]$ModuleDir,
+        [Parameter(Mandatory = $false)] [string[]]$IgnoreList
     )
 
     # 掃描所有的子模組 (.psm1) 來自動更新 NestedModules
@@ -99,7 +98,7 @@ function GetNestedModulesList{
 
     foreach ($Psm1 in $Psm1Files) {
         # 防呆：排除可能存在的根模組 (避免自我無限載入)
-        if ($Psm1.Name -eq "SeanTool.Powershell.psm1") { continue }
+        if ($null -ne $IgnoreList -and $IgnoreList -contains $Psm1.Name) { continue }
         
         # 計算相對路徑 (將絕對路徑中的根目錄字串替換掉，前面補上 .)
         # 例如： C:\Repo\PowerShell\Git\Git.psm1 => .\Git\Git.psm1
@@ -115,14 +114,23 @@ function GetNestedModulesList{
 
 <#
 .SYNOPSIS
-    檢查包含 .ps1 的子目錄，若缺乏對應的 .psm1 則自動建立
+    檢查包含 .ps1 腳本的子目錄，若缺乏對應的 .psm1 則自動建立該子模組檔案
+    
+.PARAMETER ModuleDir
+    模組的根目錄絕對路徑。用於比對以確保不會在根目錄下建立子模組
+
 .PARAMETER Scripts
-    所有被掃描到的腳本檔案陣列
+    所有被掃描到的腳本檔案陣列（通常為 Get-ChildItem 取得的 FileInfo 陣列）
+
+.PARAMETER Prefix
+    選用參數。自訂生成的 .psm1 檔案名稱前綴，後面會接上資料夾名稱
+    若未提供或為空字串，預設使用資料夾名稱作為 .psm1 名稱
 #>
 function GenPsm1{
     param(
         [Parameter(Mandatory = $true)] [string]$ModuleDir,
-        [Parameter(Mandatory = $true)] [array]$Scripts
+        [Parameter(Mandatory = $true)] [array]$Scripts,
+        [Parameter(Mandatory = $false)] [string]$Prefix
     )
 
     $ScriptGroups = $Scripts | Group-Object DirectoryName
@@ -133,7 +141,10 @@ function GenPsm1{
         # 我們只針對「子資料夾」建立 .psm1，忽略放在根目錄的 .ps1
         if ($DirPath -ne $ModuleDir) {
             $FolderName = Split-Path $DirPath -Leaf
-            $Psm1Name = "SeanTool.Powershell.${FolderName}.psm1"
+            $Psm1Name = "${FolderName}.psm1"
+            if($Prefix -ne $null -and $Prefix -ne "") {
+                $Psm1Name = "${Prefix}.${FolderName}.psm1"
+            }
             $Psm1Path = Join-Path $DirPath $Psm1Name
 
             # 如果該資料夾底下沒有專屬的 .psm1，就自動生成一個！
@@ -179,41 +190,4 @@ function GenPsd1{
     } else {
         Write-Host "Found existing .psd1, Updating export list only..."
     }
-}
-
-try {
-    $ModuleDir = $PSScriptRoot
-    $ManifestPath = Join-Path $ModuleDir "SeanTool.Powershell.psd1"
-    $Author = "SeanHo"
-    $Description = "SeanTool Meta-Module"
-    $Version = "0.0.1"
-
-    $AllScripts = GetAllPowershellScripts -FolderPath $ModuleDir
-
-    $AllFunctions = GetAllFunctions -Scripts $AllScripts
-
-    Push-Location $ModuleDir
-
-    GenPsm1 -ModuleDir $ModuleDir -Scripts $AllScripts
-
-    $NestedModulesList = GetNestedModulesList -ModuleDir $ModuleDir
-
-    GenPsd1 -ManifestPath $ManifestPath -Author $Author -Description $Description -Version $Version
-
-    Update-ModuleManifest -Path $ManifestPath `
-                                -FunctionsToExport $AllFunctions `
-                                -NestedModules $NestedModulesList `
-                                -ErrorAction Stop
-
-    Pop-Location
-} catch {
-    Write-Host "==================================================" -ForegroundColor Red
-    Write-Host "Error Occurred:" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    Write-Host "Stack Trace:" -ForegroundColor Yellow
-    Write-Host $_.ScriptStackTrace -ForegroundColor Yellow
-    Write-Host "==================================================" -ForegroundColor Red
-    
-    if (Test-Path ".\SeanTool.Powershell.psd1") { Pop-Location }
-    exit 1
 }

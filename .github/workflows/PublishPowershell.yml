@@ -4,9 +4,9 @@ name: Publish PowerShell Module to GitHub Packages
 on:
   push:
     branches:
-      - Dev/CICD
-    # paths:
-    #   - 'PowerShell/**'
+      - main
+    paths:
+      - 'PowerShell/**'
 
 jobs:
   build-and-publish:
@@ -25,7 +25,7 @@ jobs:
       - name: Generate Module Manifest and Nested Modules
         shell: pwsh
         run: |
-          ./Shell/Windows/PowerShell/UpdateManifest.ps1
+          ./Shell/Windows/PowerShell/GenManifest.ps1
 
       # 註冊 GitHub Packages 為 PowerShell 的發布來源
       - name: Register GitHub PSRepository
@@ -51,7 +51,7 @@ jobs:
           Copy-Item -Path "./Shell/Windows/PowerShell/*" -Destination "./$ModuleName/" -Recurse -Force
           
           # 將不必要的建置腳本從發布包中刪除
-          Remove-Item -Path "./$ModuleName/UpdateManifest.ps1" -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "./$ModuleName/GenManifest.ps1" -Force -ErrorAction SilentlyContinue
           
           # 執行發布
           Write-Host "開始上傳至 GitHub Packages..."
