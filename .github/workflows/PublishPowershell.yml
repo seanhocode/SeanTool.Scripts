@@ -42,7 +42,17 @@ jobs:
         env:
           NUGET_KEY: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 指定剛剛生成的 .psd1 路徑
-          $ManifestPath = "./PowerShell/SeanTool.Powershell.psd1"
+          $ModuleName = "SeanTool.Powershell"
+          Write-Host "建立標準發布目錄: ./$ModuleName"
+          New-Item -ItemType Directory -Path "./$ModuleName" -Force | Out-Null
           
-          Publish-Module -Path $ManifestPath -Repository "GitHubPackages" -NuGetApiKey $env:NUGET_KEY -Verbose
+          # 複製生成的 psd1 檔案到這個標準資料夾中
+          Write-Host "複製檔案至發布目錄..."
+          Copy-Item -Path "./Shell/Windows/PowerShell/*" -Destination "./$ModuleName/" -Recurse -Force
+          
+          # 將不必要的建置腳本從發布包中刪除
+          Remove-Item -Path "./$ModuleName/UpdateManifest.ps1" -Force -ErrorAction SilentlyContinue
+          
+          # 執行發布
+          Write-Host "開始上傳至 GitHub Packages..."
+          Publish-Module -Path "./$ModuleName" -Repository "GitHubPackages" -NuGetApiKey $env:NUGET_KEY -Verbose
