@@ -25,7 +25,7 @@ jobs:
       - name: Generate Module Manifest and Nested Modules
         shell: pwsh
         run: |
-          ./PowerShell/UpdateManifest.ps1
+          ./Shell/Windows/PowerShell/UpdateManifest.ps1
 
       # 註冊 GitHub Packages 為 PowerShell 的發布來源
       - name: Register GitHub PSRepository
