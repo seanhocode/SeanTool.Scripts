@@ -16,8 +16,11 @@
     選用參數。用於過濾特定的目錄或副檔名
     例如："SQL/*" 或 "*.cs"
 
+.PARAMETER FormatOutputPath
+    是否將輸出路徑的/取代為\
+
 .EXAMPLE
-    $files = GetGitDiffFiles -Base "master" -Target "develop" -Filter "Web/*.config"
+    $files = GetGitDiffFiles -Base "master" -Target "develop" -Filter "Web/*.config" -FormatOutputPath:$false
     # 回傳 develop 分支相對於 master 在 Web 目錄下變動過的 .config 檔案
 
 .NOTES
@@ -28,9 +31,13 @@ function GetGitDiffFiles{
         [Parameter(Mandatory = $true)] [string]$Base,
         [Parameter(Mandatory = $false)] [string]$Target,
         [Parameter(Mandatory = $false)] [string]$Filter,
-        [Parameter(Mandatory = $false)] [string]$RepoPath
+        [Parameter(Mandatory = $false)] [string]$RepoPath,
+        [Parameter(Mandatory = $false)] [switch]$FormatOutputPath = $true
     )
     if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+        $RepoPath = $PSScriptRoot
+    }
+    if ([string]::IsNullOrWhiteSpace($FormatOutputPath)) {
         $RepoPath = $PSScriptRoot
     }
 
@@ -52,7 +59,9 @@ function GetGitDiffFiles{
     }
 
     # 執行並轉換路徑斜線
-    $Files = & git $gitArgs | ForEach-Object { $_ -replace '/', '\' }
+    $Files = & git $gitArgs | ForEach-Object { $_ }
+
+    if($FormatOutputPath) { $Files = $Files | ForEach-Object { $_.Replace('/', '\') } }
 
     Pop-Location
 
