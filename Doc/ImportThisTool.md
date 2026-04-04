@@ -15,3 +15,4 @@
 1. 將 [CloneSeanToolDotScripts.ps1](../Shell/Windows/PowerShell/Git/UpdateSeanToolDotScripts.ps1) 複製到你的專案中
 2. 執行該腳本
 3. 將 ``SeanTool.Scripts`` Link 檔案更新 git
+    ![](./image/ImportThisTool/PushUpdateSubModule.png)
