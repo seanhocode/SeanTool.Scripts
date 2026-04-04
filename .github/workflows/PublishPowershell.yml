@@ -4,7 +4,7 @@ name: Publish PowerShell Module to GitHub Packages
 on:
   push:
     branches:
-      - main
+      - Release/Package
     paths:
       - 'Shell/Windows/PowerShell/**'
 
