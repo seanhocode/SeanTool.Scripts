@@ -1,4 +1,4 @@
-. "$PSScriptRoot\System\PSModuleTool.ps1"
+. "$PSScriptRoot\System\PSCommonTool.ps1"
 
 $ErrorActionPreference = 'Stop'
 

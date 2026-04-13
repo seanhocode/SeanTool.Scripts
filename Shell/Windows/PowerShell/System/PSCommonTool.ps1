@@ -191,3 +191,67 @@ function GenPsd1{
         Write-Host "Found existing .psd1, Updating export list only..."
     }
 }
+
+<#
+.SYNOPSIS
+    批次載入指定的 .NET DLL 檔案
+
+.DESCRIPTION
+    此函式會掃描指定目錄下的 DLL 檔案清單，並使用 Add-Type 將其載入至目前的 PowerShell 工作階段中
+
+.PARAMETER LibraryPath
+    存放 DLL 檔案的資料夾路徑
+
+.PARAMETER DllNames
+    要載入的 DLL 檔案名稱清單（陣列）
+    如果未指定，則會載入 LibraryPath 資料夾下的所有 DLL 檔案
+
+.EXAMPLE
+    ImportDllLibraries -LibraryPath "C:\libs" -DllNames @("A.dll", "B.dll")
+    說明：從 C:\libs 載入 A.dll 與 B.dll
+#>
+function ImportDllLibraries {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)] [string]$LibraryPath,
+        [Parameter(Mandatory = $false)] [array]$DllNames = @()
+    )
+
+    <#
+        [process 區塊的作用]
+        當使用管線 (Pipeline) 傳入多個路徑時，
+        PowerShell 會自動針對每個物件執行一次此區塊
+        即使只傳入單一參數，此處的邏輯也會被執行一次
+    #>
+    process {
+        # 確保在 process 內部建立一個區域複本，避免修改到參數原始定義
+        $targetDlls = $DllNames
+
+        # 如果沒指定檔名，自動抓取該路徑下所有 dll
+        if ($targetDlls.Count -eq 0) {
+            if (Test-Path $LibraryPath) {
+                $targetDlls = Get-ChildItem -Path $LibraryPath -Filter "*.dll" | Select-Object -ExpandProperty Name
+            } else {
+                Write-Error "Path not found: $LibraryPath"
+                return
+            }
+        }
+        
+        foreach ($dllName in $targetDlls) {
+            $fullPath = Join-Path $LibraryPath $dllName
+            
+            if (Test-Path $fullPath) {
+                try {
+                    # 避免重複載入同一型別導致的 Error (雖然 Add-Type 會自動處理，但 Verbose 更有助於偵錯)
+                    Add-Type -Path $fullPath -ErrorAction Stop
+                    Write-Verbose "Load success: $dllName"
+                } catch {
+                    # 捕捉載入失敗的原因（例如相依性缺失或檔案鎖定）
+                    Write-Warning "Load $dllName fail: $($_.Exception.Message)"
+                }
+            } else {
+                Write-Error "Not found: $fullPath"
+            }
+        }
+    }
+}

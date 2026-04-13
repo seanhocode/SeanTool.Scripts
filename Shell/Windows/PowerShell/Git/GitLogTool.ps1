@@ -37,9 +37,6 @@ function GetGitDiffFiles{
     if ([string]::IsNullOrWhiteSpace($RepoPath)) {
         $RepoPath = $PSScriptRoot
     }
-    if ([string]::IsNullOrWhiteSpace($FormatOutputPath)) {
-        $RepoPath = $PSScriptRoot
-    }
 
     Push-Location $RepoPath
 
