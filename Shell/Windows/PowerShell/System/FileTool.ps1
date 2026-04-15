@@ -27,6 +27,7 @@
 
 .NOTES
     此函式內部依賴 GetBackupPathMapping、CopyFile 與 GenCopyResult 三個自定義函式進行作業
+    此函式適合小於10000個檔案或檔案總大小小於10GB的備份任務，若檔案數量過多，建議改用robocopy備份整個目錄
 #>
 function BackupFileByTemp {
     param (
@@ -136,6 +137,11 @@ function GetBackupPathMapping{
     
     # 輸出遺失檔案
     $CopyResult.NotFoundFileList | ForEach-Object { Write-Warning "找不到檔案: $_" }
+
+.NOTES
+    - 這裡不使用平行處理原因:
+        1. 檔案複製是I/O 密集型，使用傳統硬碟時，過多的平行操作可能導致效能下降
+        2. 執行續安全性：避免同時對同一個目標路徑進行寫入操作，減少檔案損壞風險
 #>
 function CopyFile {
     param (
@@ -146,21 +152,26 @@ function CopyFile {
     $NotFoundFileList = @()
     $ErrorFileList = @()
 
+    $FolderCache = @{}
+
     foreach($FilePair in $CopyFileList){
         # Windows 檔案系統的標準分隔符號：反斜線 \
         $SourceItemPath = [System.IO.Path]::GetFullPath($FilePair[0])
         $TargetItemPath = [System.IO.Path]::GetFullPath($FilePair[1])
 
         # -PathType Leaf => 確保來源是一個「檔案」而不是「資料夾」
-        if(Test-Path $SourceItemPath -PathType Leaf){
+        if([System.IO.File]::Exists($SourceItemPath)){
             try {
-                $TargetItemFolder = Split-Path $TargetItemPath
+                $TargetItemFolder = [System.IO.Path]::GetDirectoryName($TargetItemPath)
 
-                if (-not (Test-Path -Path $TargetItemFolder)) {
-                    New-Item -ItemType Directory -Path $TargetItemFolder -Force | Out-Null
+                if (-not $FolderCache.ContainsKey($TargetItemFolder)) {
+                    if (-not [System.IO.Directory]::Exists($TargetItemFolder)) {
+                        [System.IO.Directory]::CreateDirectory($TargetItemFolder) | Out-Null
+                    }
+                    $FolderCache[$TargetItemFolder] = $true
                 }
 
-                Copy-Item -Path $SourceItemPath -Destination $TargetItemPath -Force -ErrorAction Stop
+                [System.IO.File]::Copy($SourceItemPath, $TargetItemPath, $true)
                 $SuccessFileList += ,@($SourceItemPath, $TargetItemPath)
             }
             catch {
@@ -178,6 +189,17 @@ function CopyFile {
         ErrorFileList = $ErrorFileList
     }
 }
+
+<#
+ToDo
+function CopyFileParallel {
+    param (
+        [Parameter(Mandatory = $true)] [object[][]]$CopyFileList
+    )
+
+    throw "CopyFileParallel 尚未實作，請使用 CopyFile 函式進行檔案複製。"
+}
+#>
 
 <#
 .SYNOPSIS
