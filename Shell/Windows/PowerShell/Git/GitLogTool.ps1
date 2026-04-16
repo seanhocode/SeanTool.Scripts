@@ -16,6 +16,9 @@
     選用參數。用於過濾特定的目錄或副檔名
     例如："SQL/*" 或 "*.cs"
 
+.PARAMETER RepoPath
+    選用參數。Git 儲存庫的路徑，預設為當前腳本所在的目錄
+
 .PARAMETER FormatOutputPath
     是否將輸出路徑的/取代為\
 
