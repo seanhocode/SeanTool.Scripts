@@ -36,14 +36,14 @@ function PackProject{
 
     # 確保輸出目錄存在，若不存在則自動建立
     if (-not (Test-Path $TargetFolder)) {
-        Write-Host "Target folder does not exist. Creating: $TargetFolder" -ForegroundColor DarkGray
+        Write-Host "Target folder does not exist. Creating: $TargetFolder"
         New-Item -ItemType Directory -Path $TargetFolder | Out-Null
     }
 
     foreach($ProjectFullPath in $ProjectFullPaths) {
         if(Test-Path $ProjectFullPath){
             Write-Host "========================================"
-            Write-Host "Processing Project: $ProjectFullPath" -ForegroundColor Cyan
+            Write-Host "Processing Project: $ProjectFullPath"
 
             dotnet clean $ProjectFullPath -c Release
             dotnet restore $ProjectFullPath
@@ -57,7 +57,7 @@ function PackProject{
         }
     }
 
-    Write-Host "All pack completed." -ForegroundColor Green
+    Write-Host "All pack completed."
 }
 
 <#
@@ -158,7 +158,6 @@ function PushNuGetPackage {
         $args = @("nuget", "push", "$PackagePath")
         $args += "--source", "$Source"
         $args += "--api-key", "$ApiKey"
-        $args += "--timeout", "$Timeout"
 
         if ($SkipDuplicate) { $args += "--skip-duplicate" }
         
@@ -169,7 +168,7 @@ function PushNuGetPackage {
         dotnet $args
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "Push succeeded." -ForegroundColor Green
+            Write-Host "Push succeeded."
         } else {
             Write-Error "Push failed. Exit code: $LASTEXITCODE"
         }
