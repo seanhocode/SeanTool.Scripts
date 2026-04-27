@@ -245,9 +245,22 @@ function ImportDllLibraries {
                     # 避免重複載入同一型別導致的 Error (雖然 Add-Type 會自動處理，但 Verbose 更有助於偵錯)
                     Add-Type -Path $fullPath -ErrorAction Stop
                     Write-Verbose "Load success: $dllName"
-                } catch {
-                    # 捕捉載入失敗的原因（例如相依性缺失或檔案鎖定）
-                    Write-Warning "Load $dllName fail: $($_.Exception.Message)"
+                } 
+                catch {
+                    $errMsg = $_.Exception.Message
+                    Write-Warning "Load $dllName fail: $errMsg"
+                    
+                    # 檢查是否為 ReflectionTypeLoadException
+                    if ($_.Exception.InnerException -is [System.Reflection.ReflectionTypeLoadException] -or 
+                        $_.Exception -is [System.Reflection.ReflectionTypeLoadException]) {
+                        
+                        $loaderEx = $_.Exception.LoaderExceptions
+                        if ($null -eq $loaderEx) { $loaderEx = $_.Exception.InnerException.LoaderExceptions }
+
+                        foreach ($ex in $loaderEx) {
+                            Write-Error "Detail: $($ex.Message)"
+                        }
+                    }
                 }
             } else {
                 Write-Error "Not found: $fullPath"
