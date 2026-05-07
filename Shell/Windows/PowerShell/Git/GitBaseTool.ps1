@@ -36,20 +36,15 @@ function SetGitEncoding{
 function UpdateGitHubRelease {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
-        [string]$FilePath,
+        [Parameter(Mandatory=$true)] [string]$FilePath,
 
-        [Parameter(Mandatory=$true)]
-        [string]$Repo,
+        [Parameter(Mandatory=$true)] [string]$Repo,
 
-        [Parameter(Mandatory=$true)]
-        [string]$Tag,
+        [Parameter(Mandatory=$true)] [string]$Tag,
 
-        [Parameter(Mandatory=$true)]
-        [string]$Token,
+        [Parameter(Mandatory=$true)] [string]$Token,
 
-        [Parameter(Mandatory=$false)]
-        [string]$Title
+        [Parameter(Mandatory=$false)] [string]$Title
     )
 
     process {
@@ -100,5 +95,42 @@ function UpdateGitHubRelease {
             Write-Error "Release synchronization failed. Exit code: $LASTEXITCODE"
         }
         Write-Host "========================================"
+    }
+}
+
+<#
+.SYNOPSIS
+    刪除指定 Git 存儲庫中未追蹤的檔案和目錄
+
+.DESCRIPTION
+    此函式封裝了 Git 的 clean 指令，用於刪除未追蹤的檔案和目錄
+    -d: 包含刪除未追蹤的目錄
+    -f: 強制刪除 (force)
+    -x: 包含被 .gitignore 忽略的檔案（例如 bin, obj, 暫存檔）
+    --quiet: 減少輸出，增加速度
+
+.PARAMETER RepoPath
+    必填。要清理的 Git 存儲庫資料夾路徑
+
+.EXAMPLE
+    RemoveGitUntrackedFiles -RepoPath "C:\Projects\MyRepo"
+#>
+function RemoveGitUntrackedFiles {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)] [string]$RepoPath
+    )
+
+    process {
+        Push-Location $RepoPath
+
+        # 2. 執行 Git 清理指令
+        # -d: 包含刪除未追蹤的目錄
+        # -f: 強制刪除 (force)
+        # -x: 包含被 .gitignore 忽略的檔案（例如 bin, obj, 暫存檔）
+        # --quiet: 減少輸出，增加速度
+        git clean -fdx --quiet
+
+        Pop-Location
     }
 }
