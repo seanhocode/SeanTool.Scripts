@@ -421,3 +421,85 @@ function GetFolderFileList {
         Write-Warning "路徑不存在，請檢查設定。"
     }
 }
+
+<#
+.SYNOPSIS
+    合併多個檔案為單一檔案，並在每個檔案之間插入指定的分隔符號
+
+.DESCRIPTION
+    此函式會遍歷指定的檔案清單，將每個檔案的內容讀取後合併至目標檔案中。
+    在每個檔案內容之間會插入使用者指定的分隔符號，以便區分不同檔案的內容。
+
+.PARAMETER FilePathList
+    要合併的檔案路徑清單
+
+.PARAMETER OutputPath
+    合併後的輸出檔案路徑
+
+.PARAMETER Separator
+    每個檔案內容之間的分隔符號
+
+.EXAMPLE
+    MergeFiles -FilePathList @("file1.txt", "file2.txt") -OutputPath "merged.txt" -Separator "----"
+#>
+function MergeFiles {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)] [string[]]$FilePathList,    # 傳入檔案路徑的字串陣列
+        [Parameter(Mandatory=$true)] [string]$OutputPath,      # 輸出檔案的完整路徑
+        [Parameter(Mandatory=$true)] [string]$Separator         # 分隔符號 (如 "`r`nGO`r`n")
+    )
+
+    process {
+        $sw = $null
+        try {
+            $fullOutputPath = [System.IO.Path]::GetFullPath($OutputPath)
+            
+            # 確保輸出目錄存在
+            $parentFolder = Split-Path -Path $fullOutputPath -Parent
+            if (-not (Test-Path $parentFolder)) {
+                New-Item -ItemType Directory -Path $parentFolder -Force | Out-Null
+            }
+
+            # 初始化 StreamWriter
+            # 第 2 個參數 $false 表示覆蓋舊檔；第 3 個參數指定編碼
+            $encoding = New-Object System.Text.UTF8Encoding($false) # 使用無 BOM 的 UTF8 避免 SQL 解析問題
+            $sw = New-Object System.IO.StreamWriter($fullOutputPath, $false, $encoding)
+
+            Write-Host "Starting high-speed merge..." -ForegroundColor Cyan
+
+            foreach ($path in $FilePathList) {
+                $fullPath = [System.IO.Path]::GetFullPath($path)
+
+                # 排除輸出檔案本身，並確保該檔案確實存在
+                if ($fullPath -eq $fullOutputPath) { continue }
+                if (-not (Test-Path $fullPath)) {
+                    Write-Host "Not found: $fullPath, skip." -ForegroundColor Yellow
+                    continue
+                }
+
+                Write-Host "Processing: $(Split-Path $fullPath -Leaf)" -ForegroundColor Gray
+
+                # 使用 .NET File 類別讀取，速度比 Get-Content 快很多
+                $content = [System.IO.File]::ReadAllText($fullPath)
+
+                # 寫入內容與分隔符號
+                $sw.Write($content)
+                $sw.Write($Separator)
+            }
+
+            Write-Host "Done." -ForegroundColor Green
+        }
+        catch {
+            Write-Error "Error: $_"
+        }
+        finally {
+            # 確保無論成功或失敗，檔案串流都會被關閉與釋放
+            if ($null -ne $sw) {
+                $sw.Flush()
+                $sw.Close()
+                $sw.Dispose()
+            }
+        }
+    }
+}
