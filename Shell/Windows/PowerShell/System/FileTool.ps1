@@ -440,7 +440,18 @@ function GetFolderFileList {
     每個檔案內容之間的分隔符號
 
 .EXAMPLE
-    MergeFiles -FilePathList @("file1.txt", "file2.txt") -OutputPath "merged.txt" -Separator "----"
+    $SQLFolder = "C:\SQL\DataPatch"
+    $OutFile = Join-Path $SQLFolder "merged.sql"
+
+    $SQLFiles = Get-ChildItem -Path $SQLFolder -Filter "*.sql" -Recurse
+
+    $SQLFilePaths = @()
+
+    foreach($SQLFile in $SQLFiles){
+        $SQLFilePaths += $SQLFile.FullName
+    }
+
+    MergeFiles -FilePathList $SQLFilePaths -OutputPath $OutFile -Separator "`r`nGO`r`n"
 #>
 function MergeFiles {
     [CmdletBinding()]
