@@ -1,35 +1,35 @@
-<#
-.SYNOPSIS
-    依據暫存目錄結構進行檔案備份與結果紀錄
+function Backup-FileByTemp {
+    <#
+    .SYNOPSIS
+        依據暫存目錄結構進行檔案備份與結果紀錄
 
-.DESCRIPTION
-    1. 以 $TempPath 內部的檔案目錄結構作為比對範本
-    2. 從 $SourcePath 尋找對應路徑的原始檔案
-    3. 若檔案存在，則備份至 $TargetPath 並維持原有資料夾層級
-    4. 自動呼叫 GenCopyResult 將備份結果（成功、遺失、錯誤）輸出至目標目錄
+    .DESCRIPTION
+        1. 以 $TempPath 內部的檔案目錄結構作為比對範本
+        2. 從 $SourcePath 尋找對應路徑的原始檔案
+        3. 若檔案存在，則備份至 $TargetPath 並維持原有資料夾層級
+        4. 自動呼叫 New-CopyResult 將備份結果（成功、遺失、錯誤）輸出至目標目錄
 
-.PARAMETER TempPath
-    [String] 作為比對基準的暫存資料夾，決定要備份哪些檔案的範本結構
+    .PARAMETER TempPath
+        [String] 作為比對基準的暫存資料夾，決定要備份哪些檔案的範本結構
 
-.PARAMETER SourcePath
-    [String] 實際原始檔案的存放位置，即備份來源地
+    .PARAMETER SourcePath
+        [String] 實際原始檔案的存放位置，即備份來源地
 
-.PARAMETER TargetPath
-    [String] 備份檔案的存放目標位置，同時也是執行結果紀錄檔的輸出路徑
+    .PARAMETER TargetPath
+        [String] 備份檔案的存放目標位置，同時也是執行結果紀錄檔的輸出路徑
 
-.EXAMPLE
-    $pathMappingParams = @{
-        TempPath   = "D:\Release\20260101\WebRoot"
-        SourcePath = "D:\WebRoot"
-        TargetPath = "D:\Backup\20260101\WebRoot"
-    }
-    BackupFileByTemp @pathMappingParams
+    .EXAMPLE
+        $pathMappingParams = @{
+            TempPath   = "D:\Release\20260101\WebRoot"
+            SourcePath = "D:\WebRoot"
+            TargetPath = "D:\Backup\20260101\WebRoot"
+        }
+        Backup-FileByTemp @pathMappingParams
 
-.NOTES
-    此函式內部依賴 GetBackupPathMapping、CopyFile 與 GenCopyResult 三個自定義函式進行作業
-    此函式適合小於10000個檔案或檔案總大小小於10GB的備份任務，若檔案數量過多，建議改用robocopy備份整個目錄
-#>
-function BackupFileByTemp {
+    .NOTES
+        此函式內部依賴 Get-BackupPathMapping、Copy-File 與 New-CopyResult 三個自定義函式進行作業
+        此函式適合小於10000個檔案或檔案總大小小於10GB的備份任務，若檔案數量過多，建議改用robocopy備份整個目錄
+    #>
     param (
         [Parameter(Mandatory = $true)] [string]$TempPath,
         [Parameter(Mandatory = $true)] [string]$SourcePath,
@@ -42,9 +42,9 @@ function BackupFileByTemp {
         TargetPath = $TargetPath
     }
 
-    $CopyFileList = GetBackupPathMapping @pathMappingParams
+    $CopyFileList = Get-BackupPathMapping @pathMappingParams
 
-    $CopyResult = CopyFile -CopyFileList $CopyFileList
+    $CopyResult = Copy-File -CopyFileList $CopyFileList
 
     $copyResultParams = @{
         SuccessFileList = $CopyResult.SuccessFileList
@@ -53,40 +53,40 @@ function BackupFileByTemp {
         ResultFilePath = $TargetPath
     }
 
-    GenCopyResult @copyResultParams
+    New-CopyResult @copyResultParams
 }
 
-<#
-.SYNOPSIS
-    依據暫存目錄結構產生來源與目標路徑的對應清單
+function Get-BackupPathMapping {
+    <#
+    .SYNOPSIS
+        依據暫存目錄結構產生來源與目標路徑的對應清單
 
-.DESCRIPTION
-    1. 遍歷 $TempPath 內的所有檔案作為比對基準
-    2. 透過字串替換邏輯，將 $TempPath 的相對路徑映射至 $SourcePath 與 $TargetPath
-    3. 產出一份預計執行的複製路徑清單，供後續備份作業使用
+    .DESCRIPTION
+        1. 遍歷 $TempPath 內的所有檔案作為比對基準
+        2. 透過字串替換邏輯，將 $TempPath 的相對路徑映射至 $SourcePath 與 $TargetPath
+        3. 產出一份預計執行的複製路徑清單，供後續備份作業使用
 
-.PARAMETER TempPath
-    [String] 作為基準的暫存資料夾路徑，定義「哪些檔案」需要被處理
+    .PARAMETER TempPath
+        [String] 作為基準的暫存資料夾路徑，定義「哪些檔案」需要被處理
 
-.PARAMETER SourcePath
-    [String] 原始檔案的實際存放目錄
+    .PARAMETER SourcePath
+        [String] 原始檔案的實際存放目錄
 
-.PARAMETER TargetPath
-    [String] 預計備份到的目標目錄
+    .PARAMETER TargetPath
+        [String] 預計備份到的目標目錄
 
-.OUTPUTS
-    [Object[][]] 二維陣列格式的複製清單
-    格式：@(@("來源檔案路徑", "目標檔案路徑"), ...)
+    .OUTPUTS
+        [Object[][]] 二維陣列格式的複製清單
+        格式：@(@("來源檔案路徑", "目標檔案路徑"), ...)
 
-.EXAMPLE
-    $params = @{
-        TempPath   = "C:\Temp\Update"
-        SourcePath = "C:\Deploy\App"
-        TargetPath = "D:\Backup\App"
-    }
-    $Mapping = GetBackupPathMapping @params
-#>
-function GetBackupPathMapping{
+    .EXAMPLE
+        $params = @{
+            TempPath   = "C:\Temp\Update"
+            SourcePath = "C:\Deploy\App"
+            TargetPath = "D:\Backup\App"
+        }
+        $Mapping = Get-BackupPathMapping @params
+    #>
     param (
         [Parameter(Mandatory = $true)] [string]$TempPath,
         [Parameter(Mandatory = $true)] [string]$SourcePath,
@@ -108,42 +108,42 @@ function GetBackupPathMapping{
     return $PathMapping
 }
 
-<#
-.SYNOPSIS
-    批次複製檔案並追蹤執行結果
+function Copy-File {
+    <#
+    .SYNOPSIS
+        批次複製檔案並追蹤執行結果
 
-.DESCRIPTION
-    此函式接收一個二維陣列的檔案清單，執行複製動作後，會分類並回傳成功、找不到檔案及執行錯誤的詳細清單
+    .DESCRIPTION
+        此函式接收一個二維陣列的檔案清單，執行複製動作後，會分類並回傳成功、找不到檔案及執行錯誤的詳細清單
 
-.PARAMETER CopyFileList
-    [二維陣列] 要執行的複製清單
-    格式結構：@(@("來源路徑1", "目標路徑1"), @("來源路徑2", "目標路徑2"))
+    .PARAMETER CopyFileList
+        [二維陣列] 要執行的複製清單
+        格式結構：@(@("來源路徑1", "目標路徑1"), @("來源路徑2", "目標路徑2"))
 
-.OUTPUTS
-    回傳一個包含以下屬性的物件 (PSCustomObject)：
-    - SuccessFileList: [二維陣列] 成功複製的來源與目標路徑
-    - NotFoundFileList: [一維陣列] 來源路徑不存在的檔案清單
-    - ErrorFileList: [二維陣列] 因權限或其他原因導致失敗的清單
+    .OUTPUTS
+        回傳一個包含以下屬性的物件 (PSCustomObject)：
+        - SuccessFileList: [二維陣列] 成功複製的來源與目標路徑
+        - NotFoundFileList: [一維陣列] 來源路徑不存在的檔案清單
+        - ErrorFileList: [二維陣列] 因權限或其他原因導致失敗的清單
 
-.EXAMPLE
-    $CopyFileList = @()
-    $CopyFileList += ,@("C:\Data\File1.txt", "C:\Backup\File1.txt")
-    $CopyFileList += ,@("C:\Data\Missing.txt", "C:\Backup\Missing.txt")
+    .EXAMPLE
+        $CopyFileList = @()
+        $CopyFileList += ,@("C:\Data\File1.txt", "C:\Backup\File1.txt")
+        $CopyFileList += ,@("C:\Data\Missing.txt", "C:\Backup\Missing.txt")
 
-    $CopyResult = CopyFile -CopyFileList $CopyFileList
+        $CopyResult = Copy-File -CopyFileList $CopyFileList
 
-    # 輸出成功結果
-    $CopyResult.SuccessFileList | ForEach-Object { Write-Host "成功: $($[0]) 到 $($[1])" }
-    
-    # 輸出遺失檔案
-    $CopyResult.NotFoundFileList | ForEach-Object { Write-Warning "找不到檔案: $_" }
+        # 輸出成功結果
+        $CopyResult.SuccessFileList | ForEach-Object { Write-Host "成功: $($[0]) 到 $($[1])" }
+        
+        # 輸出遺失檔案
+        $CopyResult.NotFoundFileList | ForEach-Object { Write-Warning "找不到檔案: $_" }
 
-.NOTES
-    - 這裡不使用平行處理原因:
-        1. 檔案複製是I/O 密集型，使用傳統硬碟時，過多的平行操作可能導致效能下降
-        2. 執行續安全性：避免同時對同一個目標路徑進行寫入操作，減少檔案損壞風險
-#>
-function CopyFile {
+    .NOTES
+        - 這裡不使用平行處理原因:
+            1. 檔案複製是I/O 密集型，使用傳統硬碟時，過多的平行操作可能導致效能下降
+            2. 執行續安全性：避免同時對同一個目標路徑進行寫入操作，減少檔案損壞風險
+    #>
     param (
         [Parameter(Mandatory = $true)] [object[][]]$CopyFileList
     )
@@ -197,38 +197,38 @@ function CopyFileParallel {
         [Parameter(Mandatory = $true)] [object[][]]$CopyFileList
     )
 
-    throw "CopyFileParallel 尚未實作，請使用 CopyFile 函式進行檔案複製。"
+    throw "CopyFileParallel 尚未實作，請使用 Copy-File 函式進行檔案複製。"
 }
 #>
 
-<#
-.SYNOPSIS
-    尋找檔案清單中的最長路徑並進行格式化輸出
+function Get-FormattedLines {
+    <#
+    .SYNOPSIS
+        尋找檔案清單中的最長路徑並進行格式化輸出
 
-.DESCRIPTION
-    此函式接收一個包含多組路徑的二維陣列，計算並找出字元長度最長的路徑對，
-    並將其轉換為易讀的指定字串格式（[來源] => [目標]）
+    .DESCRIPTION
+        此函式接收一個包含多組路徑的二維陣列，計算並找出字元長度最長的路徑對，
+        並將其轉換為易讀的指定字串格式（[來源] => [目標]）
 
-.PARAMETER FileList
-    [二維陣列] 包含來源與目標路徑的清單。
-    格式範例：@(@("C:\Source\Path\File.txt", "D:\Backup\Path\File.txt"))
+    .PARAMETER FileList
+        [二維陣列] 包含來源與目標路徑的清單。
+        格式範例：@(@("C:\Source\Path\File.txt", "D:\Backup\Path\File.txt"))
 
-.OUTPUTS
-    [String] 格式化後的字串。
-    輸出樣式：[來源檔案路徑] => [目標檔案路徑]
+    .OUTPUTS
+        [String] 格式化後的字串。
+        輸出樣式：[來源檔案路徑] => [目標檔案路徑]
 
-.EXAMPLE
-    $Files = @(
-        ,@("C:\Short.txt", "D:\Short.txt"),
-        ,@("C:\Very\Long\Path\To\File\Target.txt", "E:\Backup\Target.txt")
-    )
-    GetFormattedLines -FileList $Files
-    # 輸出: C:\Very\Long\Path\To\File\Target.txt => E:\Backup\Target.txt
+    .EXAMPLE
+        $Files = @(
+            ,@("C:\Short.txt", "D:\Short.txt"),
+            ,@("C:\Very\Long\Path\To\File\Target.txt", "E:\Backup\Target.txt")
+        )
+        Get-FormattedLines -FileList $Files
+        # 輸出: C:\Very\Long\Path\To\File\Target.txt => E:\Backup\Target.txt
 
-.NOTES
-    注意：若有多個路徑長度相同，函式預設回傳第一個找到的最長路徑
-#>
-function GetFormattedLines {
+    .NOTES
+        注意：若有多個路徑長度相同，函式預設回傳第一個找到的最長路徑
+    #>
     param([object[][]]$FileList)
 
     if ($null -eq $FileList -or $FileList.Count -eq 0) { return $null }
@@ -242,33 +242,33 @@ function GetFormattedLines {
     }
 }
 
-<#
-.SYNOPSIS
-    將檔案複製的執行結果分類並匯出為文字檔
+function New-CopyResult {
+    <#
+    .SYNOPSIS
+        將檔案複製的執行結果分類並匯出為文字檔
 
-.DESCRIPTION
-    根據傳入的成功、找不到及錯誤清單，分別在指定目錄下產生 Success.txt、NotFound.txt 與 Error.txt
-    若指定路徑不存在，函式會自動建立目錄
+    .DESCRIPTION
+        根據傳入的成功、找不到及錯誤清單，分別在指定目錄下產生 Success.txt、NotFound.txt 與 Error.txt
+        若指定路徑不存在，函式會自動建立目錄
 
-.PARAMETER SuccessFileList
-    [二維陣列] 成功複製的清單
-    格式：@(@("來源路徑", "目標路徑"), ...)
+    .PARAMETER SuccessFileList
+        [二維陣列] 成功複製的清單
+        格式：@(@("來源路徑", "目標路徑"), ...)
 
-.PARAMETER NotFoundFileList
-    [陣列] 來源端找不到檔案的清單
-    格式：@("來源路徑1", "來源路徑2", ...)
+    .PARAMETER NotFoundFileList
+        [陣列] 來源端找不到檔案的清單
+        格式：@("來源路徑1", "來源路徑2", ...)
 
-.PARAMETER ErrorFileList
-    [二維陣列] 複製過程中發生錯誤（如權限不足）的清單
-    格式：@(@("來源路徑", "目標路徑"), ...)
+    .PARAMETER ErrorFileList
+        [二維陣列] 複製過程中發生錯誤（如權限不足）的清單
+        格式：@(@("來源路徑", "目標路徑"), ...)
 
-.PARAMETER ResultFilePath
-    [字串] 輸出結果檔案的目標目錄路徑。此為強制參數
+    .PARAMETER ResultFilePath
+        [字串] 輸出結果檔案的目標目錄路徑。此為強制參數
 
-.EXAMPLE
-    GenCopyResult -SuccessFileList $Success -NotFoundFileList $Missing -ResultFilePath "C:\Logs\CopyReport"
-#>
-function GenCopyResult{
+    .EXAMPLE
+        New-CopyResult -SuccessFileList $Success -NotFoundFileList $Missing -ResultFilePath "C:\Logs\CopyReport"
+    #>
     param (
         [object[][]]$SuccessFileList,
         [string[]]$NotFoundFileList,
@@ -279,8 +279,8 @@ function GenCopyResult{
         New-Item -ItemType Directory -Path $ResultFilePath -Force | Out-Null 
     }
 
-    $SuccessLines = GetFormattedLines -FileList $SuccessFileList
-    $ErrorLines   = GetFormattedLines -FileList $ErrorFileList
+    $SuccessLines = Get-FormattedLines -FileList $SuccessFileList
+    $ErrorLines   = Get-FormattedLines -FileList $ErrorFileList
 
     if ($SuccessLines) { 
         $SuccessLines | Out-File -FilePath (Join-Path $ResultFilePath "Success.txt") -Encoding utf8 
@@ -293,24 +293,23 @@ function GenCopyResult{
     }
 }
 
-<#
-.SYNOPSIS
-    以樹狀結構列出指定路徑的資料夾與檔案
+function Get-FolderTreeStructure {
+    <#
+    .SYNOPSIS
+        以樹狀結構列出指定路徑的資料夾與檔案
 
-.DESCRIPTION
-    遞迴函式，會遍歷指定路徑下的所有子目錄與檔案，並使用 ASCII 字元（如 ├──, └──）產生視覺化的樹狀結構
+    .DESCRIPTION
+        遞迴函式，會遍歷指定路徑下的所有子目錄與檔案，並使用 ASCII 字元（如 ├──, └──）產生視覺化的樹狀結構
 
-.PARAMETER Path
-    要掃描的起始根目錄路徑。預設為當前目錄 "."
+    .PARAMETER Path
+        要掃描的起始根目錄路徑。預設為當前目錄 "."
 
-.PARAMETER Indent
-    遞迴時內部使用的縮排字串，一般調用時不需手動輸入
+    .PARAMETER Indent
+        遞迴時內部使用的縮排字串，一般調用時不需手動輸入
 
-.EXAMPLE
-    GetFolderTreeStructure -Path "C:\MyProject"
-#>
-
-function GetFolderTreeStructure {
+    .EXAMPLE
+        Get-FolderTreeStructure -Path "C:\MyProject"
+    #>
     param(
         [string]$Path = ".",
         [string]$Indent = ""
@@ -336,31 +335,31 @@ function GetFolderTreeStructure {
         if ($Item.PSIsContainer) {
             # 決定子層級的縮排前綴
             $NewIndent = $Indent + $(if ($IsLast) { "    " } else { "│   " })
-            $Output += GetFolderTreeStructure -Path $Item.FullName -Indent $NewIndent
+            $Output += Get-FolderTreeStructure -Path $Item.FullName -Indent $NewIndent
         }
     }
 
     return $Output
 }
 
-<#
-.SYNOPSIS
-    將目錄樹狀結構匯出至文字檔
+function Get-FolderFileTree {
+    <#
+    .SYNOPSIS
+        將目錄樹狀結構匯出至文字檔
 
-.DESCRIPTION
-    呼叫遞迴工具 GetFolderTreeStructure，並將產生的陣列格式化後存入指定檔案
-    特別處理了 UTF-8 編碼，以確保樹狀圖符號（如 ├──）在文字檔中正常顯示
+    .DESCRIPTION
+        呼叫遞迴工具 Get-FolderTreeStructure，並將產生的陣列格式化後存入指定檔案
+        特別處理了 UTF-8 編碼，以確保樹狀圖符號（如 ├──）在文字檔中正常顯示
 
-.PARAMETER TargetFolder
-    要掃描的目標資料夾路徑
+    .PARAMETER TargetFolder
+        要掃描的目標資料夾路徑
 
-.PARAMETER OutputFilePath
-    匯出結果的檔案路徑（例如：C:\output\tree.txt）
+    .PARAMETER OutputFilePath
+        匯出結果的檔案路徑（例如：C:\output\tree.txt）
 
-.EXAMPLE
-    GetFolderFileTree -TargetFolder "D:\Project" -OutputFilePath ".\project_tree.txt"
-#>
-function GetFolderFileTree {
+    .EXAMPLE
+        Get-FolderFileTree -TargetFolder "D:\Project" -OutputFilePath ".\project_tree.txt"
+    #>
     param (
         [string]$TargetFolder = ".",
         [string]$OutputFilePath = ""
@@ -371,7 +370,7 @@ function GetFolderFileTree {
         
         # 初始化內容（加入根目錄名稱）
         $FinalResult = @($TargetFolder)
-        $FinalResult += GetFolderTreeStructure -Path $TargetFolder
+        $FinalResult += Get-FolderTreeStructure -Path $TargetFolder
         
         # 輸出至檔案 (使用 UTF8 編碼確保符號不亂碼)
         $FinalResult | Out-File -FilePath $OutputFilePath -Encoding utf8
@@ -382,24 +381,24 @@ function GetFolderFileTree {
     }
 }
 
-<#
-.SYNOPSIS
-    遞迴掃描資料夾中的所有檔案，並匯出詳細清單至 CSV 檔案
+function Get-FolderFileList {
+    <#
+    .SYNOPSIS
+        遞迴掃描資料夾中的所有檔案，並匯出詳細清單至 CSV 檔案
 
-.DESCRIPTION
-    此函式會遍歷指定路徑下的所有子目錄，提取每個檔案的完整路徑 (FullName) 與檔案大小 (Length)，
-    並將結果儲存為結構化的 CSV 格式，方便後續在 Excel 或其他資料分析工具中開啟
+    .DESCRIPTION
+        此函式會遍歷指定路徑下的所有子目錄，提取每個檔案的完整路徑 (FullName) 與檔案大小 (Length)，
+        並將結果儲存為結構化的 CSV 格式，方便後續在 Excel 或其他資料分析工具中開啟
 
-.PARAMETER TargetFolder
-    要掃描的起始資料夾路徑
+    .PARAMETER TargetFolder
+        要掃描的起始資料夾路徑
 
-.PARAMETER OutputFilePath
-    匯出的 CSV 檔案儲存路徑
+    .PARAMETER OutputFilePath
+        匯出的 CSV 檔案儲存路徑
 
-.EXAMPLE
-    GetFolderFileList -TargetFolder "C:\Docs" -OutputFilePath ".\FileInventory.csv"
-#>
-function GetFolderFileList {
+    .EXAMPLE
+        Get-FolderFileList -TargetFolder "C:\Docs" -OutputFilePath ".\FileInventory.csv"
+    #>
     param (
         [string]$TargetFolder = ".",
         [string]$OutputFilePath = ""
@@ -422,38 +421,38 @@ function GetFolderFileList {
     }
 }
 
-<#
-.SYNOPSIS
-    合併多個檔案為單一檔案，並在每個檔案之間插入指定的分隔符號
+function Merge-Files {
+    <#
+    .SYNOPSIS
+        合併多個檔案為單一檔案，並在每個檔案之間插入指定的分隔符號
 
-.DESCRIPTION
-    此函式會遍歷指定的檔案清單，將每個檔案的內容讀取後合併至目標檔案中。
-    在每個檔案內容之間會插入使用者指定的分隔符號，以便區分不同檔案的內容。
+    .DESCRIPTION
+        此函式會遍歷指定的檔案清單，將每個檔案的內容讀取後合併至目標檔案中。
+        在每個檔案內容之間會插入使用者指定的分隔符號，以便區分不同檔案的內容。
 
-.PARAMETER FilePathList
-    要合併的檔案路徑清單
+    .PARAMETER FilePathList
+        要合併的檔案路徑清單
 
-.PARAMETER OutputPath
-    合併後的輸出檔案路徑
+    .PARAMETER OutputPath
+        合併後的輸出檔案路徑
 
-.PARAMETER Separator
-    每個檔案內容之間的分隔符號
+    .PARAMETER Separator
+        每個檔案內容之間的分隔符號
 
-.EXAMPLE
-    $SQLFolder = "C:\SQL\DataPatch"
-    $OutFile = Join-Path $SQLFolder "merged.sql"
+    .EXAMPLE
+        $SQLFolder = "C:\SQL\DataPatch"
+        $OutFile = Join-Path $SQLFolder "merged.sql"
 
-    $SQLFiles = Get-ChildItem -Path $SQLFolder -Filter "*.sql" -Recurse
+        $SQLFiles = Get-ChildItem -Path $SQLFolder -Filter "*.sql" -Recurse
 
-    $SQLFilePaths = @()
+        $SQLFilePaths = @()
 
-    foreach($SQLFile in $SQLFiles){
-        $SQLFilePaths += $SQLFile.FullName
-    }
+        foreach($SQLFile in $SQLFiles){
+            $SQLFilePaths += $SQLFile.FullName
+        }
 
-    MergeFiles -FilePathList $SQLFilePaths -OutputPath $OutFile -Separator "`r`nGO`r`n"
-#>
-function MergeFiles {
+        Merge-Files -FilePathList $SQLFilePaths -OutputPath $OutFile -Separator "`r`nGO`r`n"
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string[]]$FilePathList,    # 傳入檔案路徑的字串陣列
@@ -512,5 +511,98 @@ function MergeFiles {
                 $sw.Dispose()
             }
         }
+    }
+}
+
+function Get-DiskUsage {
+    <#
+    .SYNOPSIS
+    掃描指定磁碟或資料夾下子資料夾的大小，並列出佔用空間最大的資料夾。
+
+    .DESCRIPTION
+    以遞迴方式計算每個子資料夾的總大小，並依照大小排序後輸出前 N 個結果。
+
+    .PARAMETER TargetFolder
+    要掃描的目標資料夾路徑。
+
+    .PARAMETER Top
+    顯示前幾個最大的資料夾，預設為 20。
+
+    .EXAMPLE
+    Get-DiskUsage -TargetFolder "C:\" -Top 15
+
+    .EXAMPLE
+    Get-DiskUsage -TargetFolder "D:\" | Export-Csv -Path "D:\Report.csv" -NoTypeInformation -Encoding UTF8
+    #>
+    [CmdletBinding()]
+    param (
+        # 要掃描的目標路徑 (預設為 C 槽)
+        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateScript({
+            if (Test-Path $_) { $true } else { throw "Not found folder: $_" }
+        })]
+        [string]$TargetFolder = "C:\",
+
+        # 顯示前 N 個最大的資料夾 (預設顯示前 20 名)
+        [Parameter()]
+        [int]$Top = 20
+    )
+
+    begin {
+        # 建立內部遞迴函數，避免污染全域環境
+        function Get-DirectorySizeInternal {
+            param ([System.IO.DirectoryInfo]$Dir)
+            
+            $size = 0L
+            try {
+                # 計算當前目錄下的檔案大小
+                foreach ($file in $Dir.EnumerateFiles()) {
+                    $size += $file.Length
+                }
+                # 遞迴計算子目錄
+                foreach ($subDir in $Dir.EnumerateDirectories()) {
+                    $size += Get-DirectorySizeInternal -Dir $subDir
+                }
+            } catch [System.UnauthorizedAccessException] {
+                Write-Warning "Could not access folder: $($Dir.FullName), possibly due to insufficient permissions."
+            } catch {
+                # 略過其他讀取錯誤
+            }
+            return $size
+        }
+    }
+
+    process {
+        Write-Host "Starting scan of folder usage for [$TargetFolder]... (please be patient)" -ForegroundColor Cyan
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        
+        $baseDir = [System.IO.DirectoryInfo]::new($TargetFolder)
+        $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+        try {
+            # 取得第一層所有的子資料夾
+            $subDirectories = $baseDir.EnumerateDirectories()
+
+            foreach ($dir in $subDirectories) {
+                $dirSize = Get-DirectorySizeInternal -Dir $dir
+                
+                $results.Add([PSCustomObject]@{
+                    FolderName = $dir.Name
+                    SizeGB     = [math]::Round($dirSize / 1GB, 2)
+                    SizeMB     = [math]::Round($dirSize / 1MB, 2)
+                    SizeBytes  = $dirSize
+                    FullPath   = $dir.FullName
+                })
+            }
+        } catch {
+            Write-Error "Could not read the root directory. Please ensure you have sufficient permissions (it is recommended to run as an administrator)."
+            return
+        }
+
+        $stopwatch.Stop()
+        Write-Host "Scan completed! Time elapsed: $($stopwatch.Elapsed.TotalSeconds.ToString('F2')) seconds" -ForegroundColor Green
+
+        # 排序並輸出結果
+        $results | Sort-Object SizeBytes -Descending | Select-Object -First $Top
     }
 }

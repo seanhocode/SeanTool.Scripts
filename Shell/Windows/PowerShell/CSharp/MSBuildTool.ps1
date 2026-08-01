@@ -1,24 +1,24 @@
 $Script:MSBuild = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
 
-<#
-    .SYNOPSIS
-        建置專案(debug)
-    .DESCRIPTION
-        使用 MSBuild 建置指定的解決方案，並設定為 Debug 模式和 Any CPU 平台
-    .PARAMETER SolutionFolderPath
-        指定解決方案所在的資料夾路徑
-    .PARAMETER SolutionName
-        指定解決方案的名稱（含副檔名）
-    .PARAMETER MSBuildPath
-        指定 MSBuild 的路徑
-    .EXAMPLE
-        $repoPath = "C:\Project\MyProject"
-        $solutionFolderPath = Join-Path $repoPath "Src"
-        $solutionName = "MyProject.sln"
+function Invoke-DebugProjectBuild {
+    <#
+        .SYNOPSIS
+            建置專案(debug)
+        .DESCRIPTION
+            使用 MSBuild 建置指定的解決方案，並設定為 Debug 模式和 Any CPU 平台
+        .PARAMETER SolutionFolderPath
+            指定解決方案所在的資料夾路徑
+        .PARAMETER SolutionName
+            指定解決方案的名稱（含副檔名）
+        .PARAMETER MSBuildPath
+            指定 MSBuild 的路徑
+        .EXAMPLE
+            $repoPath = "C:\Project\MyProject"
+            $solutionFolderPath = Join-Path $repoPath "Src"
+            $solutionName = "MyProject.sln"
 
-        BuildDebugProject -SolutionFolderPath $solutionFolderPath -SolutionName $solutionName -MSBuildPath $msBuildPath
-#>
-function BuildDebugProject {
+            Invoke-DebugProjectBuild -SolutionFolderPath $solutionFolderPath -SolutionName $solutionName -MSBuildPath $msBuildPath
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string]$SolutionFolderPath,
@@ -38,28 +38,28 @@ function BuildDebugProject {
     }
 }
 
-<#
-    .SYNOPSIS
-        發佈專案
-    .DESCRIPTION
-        使用 MSBuild 發佈指定的解決方案，並使用指定的發佈設定檔
-    .PARAMETER SolutionFolderPath
-        指定解決方案所在的資料夾路徑
-    .PARAMETER SolutionName
-        指定解決方案的名稱（含副檔名）
-    .PARAMETER PublishProfile
-        指定發佈設定檔名稱（不需要副檔名）
-    .PARAMETER MSBuildPath
-        指定 MSBuild 的路徑，預設為 $Script:MSBuild
-    .EXAMPLE
-        $repoPath = "C:\Project\MyProject"
-        $solutionFolderPath = Join-Path $repoPath "Src"
-        $solutionName = "MyProject.sln"
-        $publishProfile = "Release"
+function Publish-Project {
+    <#
+        .SYNOPSIS
+            發佈專案
+        .DESCRIPTION
+            使用 MSBuild 發佈指定的解決方案，並使用指定的發佈設定檔
+        .PARAMETER SolutionFolderPath
+            指定解決方案所在的資料夾路徑
+        .PARAMETER SolutionName
+            指定解決方案的名稱（含副檔名）
+        .PARAMETER PublishProfile
+            指定發佈設定檔名稱（不需要副檔名）
+        .PARAMETER MSBuildPath
+            指定 MSBuild 的路徑，預設為 $Script:MSBuild
+        .EXAMPLE
+            $repoPath = "C:\Project\MyProject"
+            $solutionFolderPath = Join-Path $repoPath "Src"
+            $solutionName = "MyProject.sln"
+            $publishProfile = "Release"
 
-        PublishProject -SolutionFolderPath $solutionFolderPath -SolutionName $solutionName -PublishProfile $publishProfile
-#>
-function PublishProject {
+            Publish-Project -SolutionFolderPath $solutionFolderPath -SolutionName $solutionName -PublishProfile $publishProfile
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string]$SolutionFolderPath,

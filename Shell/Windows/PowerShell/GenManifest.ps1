@@ -9,17 +9,17 @@ try {
     $Description = "SeanTool Meta-Module"
     $Version = "0.0.0"
 
-    $AllScripts = GetAllPowershellScripts -FolderPath $ModuleDir
+    $AllScripts = Get-PowerShellScripts -FolderPath $ModuleDir
 
-    $AllFunctions = GetAllPowershellFunctions -Scripts $AllScripts
+    $AllFunctions = Get-PowerShellFunctions -Scripts $AllScripts
 
     Push-Location $ModuleDir
 
-    GenPsm1 -ModuleDir $ModuleDir -Scripts $AllScripts -Prefix "SeanTool.Powershell"
+    New-SubmoduleFile -ModuleDir $ModuleDir -Scripts $AllScripts -Prefix "SeanTool.Powershell"
 
-    $NestedModulesList = GetNestedModulesList -ModuleDir $ModuleDir -IgnoreList @("SeanTool.Powershell.psm1")
+    $NestedModulesList = Get-NestedModulesList -ModuleDir $ModuleDir -IgnoreList @("SeanTool.Powershell.psm1")
 
-    GenPsd1 -ManifestPath $ManifestPath -Author $Author -Description $Description -Version $Version
+    New-ModuleManifestFile -ManifestPath $ManifestPath -Author $Author -Description $Description -Version $Version
 
     Update-ModuleManifest -Path $ManifestPath `
                                 -FunctionsToExport $AllFunctions `

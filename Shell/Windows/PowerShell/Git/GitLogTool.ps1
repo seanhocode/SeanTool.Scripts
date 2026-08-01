@@ -1,35 +1,35 @@
-﻿<#
-.SYNOPSIS
-    取得兩個 Git Log 之間差異檔案清單
+﻿function Get-GitDiffFiles {
+    <#
+    .SYNOPSIS
+        取得兩個 Git Log 之間差異檔案清單
 
-.DESCRIPTION
-    此函式會比較指定的基礎分支（Base）與目標分支（Target），並回傳變動過的檔案路徑
-    輸出的路徑會自動將 Git 的正斜線 (/) 轉換為 Windows 的反斜線 (\)
+    .DESCRIPTION
+        此函式會比較指定的基礎分支（Base）與目標分支（Target），並回傳變動過的檔案路徑
+        輸出的路徑會自動將 Git 的正斜線 (/) 轉換為 Windows 的反斜線 (\)
 
-.PARAMETER Base
-    必要的參數。比較的基準，可以是 Branch Name 或 Commit ID
+    .PARAMETER Base
+        必要的參數。比較的基準，可以是 Branch Name 或 Commit ID
 
-.PARAMETER Target
-    選用參數。要比較的目標，若省略，則與當前工作目錄(Working Tree)比對
+    .PARAMETER Target
+        選用參數。要比較的目標，若省略，則與當前工作目錄(Working Tree)比對
 
-.PARAMETER Filter
-    選用參數。用於過濾特定的目錄或副檔名
-    例如："SQL/*" 或 "*.cs"
+    .PARAMETER Filter
+        選用參數。用於過濾特定的目錄或副檔名
+        例如："SQL/*" 或 "*.cs"
 
-.PARAMETER RepoPath
-    選用參數。Git 儲存庫的路徑，預設為當前腳本所在的目錄
+    .PARAMETER RepoPath
+        選用參數。Git 儲存庫的路徑，預設為當前腳本所在的目錄
 
-.PARAMETER FormatOutputPath
-    是否將輸出路徑的/取代為\
+    .PARAMETER FormatOutputPath
+        是否將輸出路徑的/取代為\
 
-.EXAMPLE
-    $files = GetGitDiffFiles -Base "master" -Target "develop" -Filter "Web/*.config" -FormatOutputPath:$false
-    # 回傳 develop 分支相對於 master 在 Web 目錄下變動過的 .config 檔案
+    .EXAMPLE
+        $files = Get-GitDiffFiles -Base "master" -Target "develop" -Filter "Web/*.config" -FormatOutputPath:$false
+        # 回傳 develop 分支相對於 master 在 Web 目錄下變動過的 .config 檔案
 
-.NOTES
-    函式會自動將 [Console]::OutputEncoding 設為 UTF8，以支援包含中文檔名的路徑
-#>
-function GetGitDiffFiles{
+    .NOTES
+        函式會自動將 [Console]::OutputEncoding 設為 UTF8，以支援包含中文檔名的路徑
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)] [string]$Base,
@@ -72,28 +72,28 @@ function GetGitDiffFiles{
     }
 }
 
-<#
-.SYNOPSIS
-    取得兩個分支之間的 Commit 標題差異
+function Get-GitDiffCommitTitle {
+    <#
+    .SYNOPSIS
+        取得兩個分支之間的 Commit 標題差異
 
-.DESCRIPTION
-    此函式會比較指定的來源分支（SourceBranch）與目標分支（TargetBranch），並回傳在來源分支中存在但在目標分支中不存在的 Commit 標題
-    排除 Merge Commit
+    .DESCRIPTION
+        此函式會比較指定的來源分支（SourceBranch）與目標分支（TargetBranch），並回傳在來源分支中存在但在目標分支中不存在的 Commit 標題
+        排除 Merge Commit
 
-.PARAMETER RepoPath
-    必填。Git 儲存庫的路徑
+    .PARAMETER RepoPath
+        必填。Git 儲存庫的路徑
 
-.PARAMETER SourceBranch
-    必填。來源分支名稱
+    .PARAMETER SourceBranch
+        必填。來源分支名稱
 
-.PARAMETER TargetBranch
-    必填。目標分支名稱
+    .PARAMETER TargetBranch
+        必填。目標分支名稱
 
-.EXAMPLE
-    GetGitDiffCommitTitle -RepoPath "C:\Projects\MyRepo" -SourceBranch "develop" -TargetBranch "master"
-    # 回傳 develop 分支相對於 master 分支的 Commit 標題差異
-#>
-function GetGitDiffCommitTitle {
+    .EXAMPLE
+        Get-GitDiffCommitTitle -RepoPath "C:\Projects\MyRepo" -SourceBranch "develop" -TargetBranch "master"
+        # 回傳 develop 分支相對於 master 分支的 Commit 標題差異
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string]$RepoPath,

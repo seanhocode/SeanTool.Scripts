@@ -1,39 +1,39 @@
-function SetGitEncoding{
+function Set-GitEncoding {
     git config --global i18n.commitencoding utf-8
     git config --global i18n.logoutputencoding utf-8
     set LESSCHARSET=utf-8
     git config --global core.quotepath false
 }
 
-<#
-.SYNOPSIS
-    將指定路徑下的檔案同步更新至 GitHub Release (支援新增與覆寫)
+function Update-GitHubRelease {
+    <#
+    .SYNOPSIS
+        將指定路徑下的檔案同步更新至 GitHub Release (支援新增與覆寫)
 
-.DESCRIPTION
-    此函式封裝了 GitHub CLI (gh) 的 Release 指令
-    會自動檢查指定的 Tag 是否已存在於 GitHub：
-    - 若不存在：建立新的 Release 並上傳檔案
-    - 若已存在：將檔案上傳至該 Release，若檔案名稱重複則直接覆寫 (Clobber)
+    .DESCRIPTION
+        此函式封裝了 GitHub CLI (gh) 的 Release 指令
+        會自動檢查指定的 Tag 是否已存在於 GitHub：
+        - 若不存在：建立新的 Release 並上傳檔案
+        - 若已存在：將檔案上傳至該 Release，若檔案名稱重複則直接覆寫 (Clobber)
 
-.PARAMETER FilePath
-    必填。要上傳的檔案路徑。支援單一檔案路徑或萬用字元 (例如: "C:\dist\*.nupkg")
+    .PARAMETER FilePath
+        必填。要上傳的檔案路徑。支援單一檔案路徑或萬用字元 (例如: "C:\dist\*.nupkg")
 
-.PARAMETER Repo
-    必填。目標 GitHub 存儲庫，格式為 "擁有者/專案名" (例如: "seanhocode/MyTool")
+    .PARAMETER Repo
+        必填。目標 GitHub 存儲庫，格式為 "擁有者/專案名" (例如: "seanhocode/MyTool")
 
-.PARAMETER Tag
-    必填。Release 的標籤名稱 (例如: "v1.0.0")
+    .PARAMETER Tag
+        必填。Release 的標籤名稱 (例如: "v1.0.0")
 
-.PARAMETER Token
-    必填。用於驗證身分的 GitHub 個人存取權杖 (PAT)
+    .PARAMETER Token
+        必填。用於驗證身分的 GitHub 個人存取權杖 (PAT)
 
-.PARAMETER Title
-    選填。建立新 Release 時使用的標題。若未提供，預設與 Tag 相同
+    .PARAMETER Title
+        選填。建立新 Release 時使用的標題。若未提供，預設與 Tag 相同
 
-.EXAMPLE
-    UpdateGitHubRelease -FilePath ".\nupkgs\*.nupkg" -Repo "seanhocode/MyTool" -Tag "v1.0.5" -Token "ghp_xxx"
-#>
-function UpdateGitHubRelease {
+    .EXAMPLE
+        Update-GitHubRelease -FilePath ".\nupkgs\*.nupkg" -Repo "seanhocode/MyTool" -Tag "v1.0.5" -Token "ghp_xxx"
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string]$FilePath,
@@ -98,24 +98,24 @@ function UpdateGitHubRelease {
     }
 }
 
-<#
-.SYNOPSIS
-    刪除指定 Git 存儲庫中未追蹤的檔案和目錄
+function Remove-GitUntrackedFiles {
+    <#
+    .SYNOPSIS
+        刪除指定 Git 存儲庫中未追蹤的檔案和目錄
 
-.DESCRIPTION
-    此函式封裝了 Git 的 clean 指令，用於刪除未追蹤的檔案和目錄
-    -d: 包含刪除未追蹤的目錄
-    -f: 強制刪除 (force)
-    -x: 包含被 .gitignore 忽略的檔案（例如 bin, obj, 暫存檔）
-    --quiet: 減少輸出，增加速度
+    .DESCRIPTION
+        此函式封裝了 Git 的 clean 指令，用於刪除未追蹤的檔案和目錄
+        -d: 包含刪除未追蹤的目錄
+        -f: 強制刪除 (force)
+        -x: 包含被 .gitignore 忽略的檔案（例如 bin, obj, 暫存檔）
+        --quiet: 減少輸出，增加速度
 
-.PARAMETER RepoPath
-    必填。要清理的 Git 存儲庫資料夾路徑
+    .PARAMETER RepoPath
+        必填。要清理的 Git 存儲庫資料夾路徑
 
-.EXAMPLE
-    RemoveGitUntrackedFiles -RepoPath "C:\Projects\MyRepo"
-#>
-function RemoveGitUntrackedFiles {
+    .EXAMPLE
+        Remove-GitUntrackedFiles -RepoPath "C:\Projects\MyRepo"
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)] [string]$RepoPath
@@ -135,23 +135,23 @@ function RemoveGitUntrackedFiles {
     }
 }
 
-<#
-.SYNOPSIS
-    克隆指定的 Git 存儲庫
+function Invoke-RepositoryClone {
+    <#
+    .SYNOPSIS
+        克隆指定的 Git 存儲庫
 
-.DESCRIPTION
-    此函式封裝了 Git 的 clone 指令，用於克隆指定的 Git 存儲庫
+    .DESCRIPTION
+        此函式封裝了 Git 的 clone 指令，用於克隆指定的 Git 存儲庫
 
-.PARAMETER RepoUrl
-    必填。要克隆的 Git 存儲庫 URL
+    .PARAMETER RepoUrl
+        必填。要克隆的 Git 存儲庫 URL
 
-.PARAMETER TargetRootPath
-    選填。克隆目標資料夾路徑，若未提供，則使用當前資料夾
+    .PARAMETER TargetRootPath
+        選填。克隆目標資料夾路徑，若未提供，則使用當前資料夾
 
-.EXAMPLE
-    CloneRepository -RepoUrl "https://github.com.tw/seanhocode/Repo1.git" -TargetRootPath "C:\Projects"
-#>
-function CloneRepository {
+    .EXAMPLE
+        Invoke-RepositoryClone -RepoUrl "https://github.com.tw/seanhocode/Repo1.git" -TargetRootPath "C:\Projects"
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)] [string]$RepoUrl,
@@ -180,24 +180,24 @@ function CloneRepository {
     }
 }
 
-<#
-.SYNOPSIS
-    切換指定 Git 存儲庫的分支
+function Switch-GitBranch {
+    <#
+    .SYNOPSIS
+        切換指定 Git 存儲庫的分支
 
-.DESCRIPTION
-    此函式封裝了 Git 的 checkout 指令，用於切換指定的分支
-    並自動處理未提交的變更 (stash)
+    .DESCRIPTION
+        此函式封裝了 Git 的 checkout 指令，用於切換指定的分支
+        並自動處理未提交的變更 (stash)
 
-.PARAMETER RepoPath
-    必填。要切換分支的 Git 存儲庫資料夾路徑
+    .PARAMETER RepoPath
+        必填。要切換分支的 Git 存儲庫資料夾路徑
 
-.PARAMETER TargetBranch
-    必填。目標分支名稱
+    .PARAMETER TargetBranch
+        必填。目標分支名稱
 
-.EXAMPLE
-    SwitchGitBranch -RepoPath "C:\Projects\MyRepo" -TargetBranch "develop"
-#>
-function SwitchGitBranch {
+    .EXAMPLE
+        Switch-GitBranch -RepoPath "C:\Projects\MyRepo" -TargetBranch "develop"
+    #>
     [CmdletBinding()]
     param (
         # 接收來自管道的路徑
@@ -269,40 +269,40 @@ function SwitchGitBranch {
     }
 }
 
-<#
-.SYNOPSIS
-    批次克隆多個 Git 存儲庫
+function Invoke-BatchClone {
+    <#
+    .SYNOPSIS
+        批次克隆多個 Git 存儲庫
 
-.DESCRIPTION
-    此函式封裝了多個 Git 存儲庫的克隆操作，並支援並行處理以加快下載速度
+    .DESCRIPTION
+        此函式封裝了多個 Git 存儲庫的克隆操作，並支援並行處理以加快下載速度
 
-.PARAMETER RepoUrlList
-    必填。要克隆的 Git 存儲庫 URL 列表
+    .PARAMETER RepoUrlList
+        必填。要克隆的 Git 存儲庫 URL 列表
 
-.PARAMETER TargetFolderPath
-    必填。克隆目標資料夾路徑
+    .PARAMETER TargetFolderPath
+        必填。克隆目標資料夾路徑
 
-.EXAMPLE
-    $RepoUrlList = @(
-        "https://github.com.tw/seanhocode/Repo1.git",
-        "https://github.com.tw/seanhocode/Repo2.git",
-        "https://github.com.tw/seanhocode/Repo3.git",
-        "https://github.com.tw/seanhocode/Repo4.git",
-        "https://github.com.tw/seanhocode/Repo5.git",
-        "https://github.com.tw/seanhocode/Repo6.git"
-    )
+    .EXAMPLE
+        $RepoUrlList = @(
+            "https://github.com.tw/seanhocode/Repo1.git",
+            "https://github.com.tw/seanhocode/Repo2.git",
+            "https://github.com.tw/seanhocode/Repo3.git",
+            "https://github.com.tw/seanhocode/Repo4.git",
+            "https://github.com.tw/seanhocode/Repo5.git",
+            "https://github.com.tw/seanhocode/Repo6.git"
+        )
 
-    BatchClone -RepoUrlList $RepoUrlList -TargetFolderPath "C:\GSS\Radar\Project\Test"
-#>
-function BatchClone {
+        Invoke-BatchClone -RepoUrlList $RepoUrlList -TargetFolderPath "C:\GSS\Radar\Project\Test"
+    #>
     param (
         [Parameter(Mandatory = $true)] [string[]]$RepoUrlList,
         [Parameter(Mandatory = $true)] [string]$TargetFolderPath
     )
 
-    # 取得當前 Session 中 CloneRepository 函式的定義內容
+    # 取得當前 Session 中 Invoke-RepositoryClone 函式的定義內容
     # 這會將函式代碼封裝成一個 ScriptBlock 變數
-    $repoFunc = Get-Item "Function:\CloneRepository"
+    $repoFunc = Get-Item "Function:\Invoke-RepositoryClone"
 
     if (!(Test-Path $TargetFolderPath)) {
         New-Item -ItemType Directory -Force -Path $TargetFolderPath | Out-Null
@@ -325,34 +325,34 @@ function BatchClone {
     Write-Host "All downloads done." -ForegroundColor Cyan
 }
 
-<#
-.SYNOPSIS
-    批次切換多個 Git 存儲庫的分支
+function Invoke-BatchSwitchBranch {
+    <#
+    .SYNOPSIS
+        批次切換多個 Git 存儲庫的分支
 
-.DESCRIPTION
-    此函式封裝了多個 Git 存儲庫的分支切換操作，並支援並行處理以加快操作速度
+    .DESCRIPTION
+        此函式封裝了多個 Git 存儲庫的分支切換操作，並支援並行處理以加快操作速度
 
-.PARAMETER RepoPaths
-    必填。要切換分支的 Git 存儲庫資料夾路徑列表
+    .PARAMETER RepoPaths
+        必填。要切換分支的 Git 存儲庫資料夾路徑列表
 
-.PARAMETER TargetBranch
-    必填。目標分支名稱
+    .PARAMETER TargetBranch
+        必填。目標分支名稱
 
-.EXAMPLE
-    $RepoPaths = @(
-        "C:\Project\Repo1",
-        "C:\Project\Repo2",
-        "C:\Project\Repo3",
-        "C:\Project\Repo4",
-        "C:\Project\Repo5",
-        "C:\Project\Repo6"
-    )
+    .EXAMPLE
+        $RepoPaths = @(
+            "C:\Project\Repo1",
+            "C:\Project\Repo2",
+            "C:\Project\Repo3",
+            "C:\Project\Repo4",
+            "C:\Project\Repo5",
+            "C:\Project\Repo6"
+        )
 
-    $TargetBranch = "master"
+        $TargetBranch = "master"
 
-    BatchSwitchBranch -RepoPaths $RepoPaths -TargetBranch $TargetBranch
-#>
-function BatchSwitchBranch {
+        Invoke-BatchSwitchBranch -RepoPaths $RepoPaths -TargetBranch $TargetBranch
+    #>
     param (
         [Parameter(Mandatory = $true)] [string[]]$RepoPaths,
         [Parameter(Mandatory = $true)] [string]$TargetBranch
@@ -362,7 +362,7 @@ function BatchSwitchBranch {
     Write-Host "==================================================" -ForegroundColor Cyan
 
     # 使用管道將陣列一個個丟給核心邏輯
-    $RepoPaths | SwitchGitBranch -TargetBranch $TargetBranch
+    $RepoPaths | Switch-GitBranch -TargetBranch $TargetBranch
 
     Write-Host "==================================================" -ForegroundColor Cyan
     Write-Host "--- All tasks completed. ---" -ForegroundColor Green

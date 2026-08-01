@@ -1,20 +1,30 @@
-<#
-.SYNOPSIS
-    自動掃描 PowerShell 原始碼，更新 SeanTool.Powershell.psd1 的 FunctionsToExport 與 NestedModules
-    並自動建立缺失的子模組 (.psm1) 檔案
-#>
+function Get-PowerShellScripts {
+    <#
+    .SYNOPSIS
+        自動掃描 PowerShell 原始碼，更新 SeanTool.Powershell.psd1 的 FunctionsToExport 與 NestedModules
+        並自動建立缺失的子模組 (.psm1) 檔案
+    #>
 
-<#
-.SYNOPSIS
-    取得指定目錄下所有的 .ps1 腳本檔案
-.PARAMETER FolderPath
-    要掃描的根目錄路徑
-.OUTPUTS
-    [System.IO.FileInfo[]] 包含所有 .ps1 檔案的陣列
-#>
-function GetAllPowershellScripts{
+    <#
+    .SYNOPSIS
+        取得指定目錄下所有的 .ps1 腳本檔案。
+
+    .DESCRIPTION
+        遞迴掃描指定資料夾下的 PowerShell 腳本檔案，並排除更新 manifest 的自我腳本。
+
+    .PARAMETER FolderPath
+        要掃描的根目錄路徑。
+
+    .OUTPUTS
+        [System.IO.FileInfo[]] 包含所有 .ps1 檔案的陣列。
+
+    .EXAMPLE
+        Get-PowerShellScripts -FolderPath "C:\Scripts"
+    #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)] [string]$FolderPath
+        [Parameter(Mandatory = $true)]
+        [string]$FolderPath
     )
     Write-Host "=================================================="
     Write-Host "Start scanning scripts...`n"
@@ -28,17 +38,27 @@ function GetAllPowershellScripts{
     return $AllScripts
 }
 
-<#
-.SYNOPSIS
-    掃描傳入的腳本檔案內容，透過正規表示式萃取所有公開的 Function 名稱
-.PARAMETER Scripts
-    從 GetAllPowershellScripts 取得的腳本檔案陣列
-.OUTPUTS
-    [string[]] 準備要匯出的 Function 名稱清單（已過濾掉私有函式）
-#>
-function GetAllPowershellFunctions{
+function Get-PowerShellFunctions {
+    <#
+    .SYNOPSIS
+        掃描腳本內容並擷取所有可匯出的函式名稱。
+
+    .DESCRIPTION
+        透過正規表示式解析腳本檔案內容，找出所有公開函式名稱，並排除以下底線開頭的私有函式。
+
+    .PARAMETER Scripts
+        由 Get-PowerShellScripts 取得的腳本檔案陣列。
+
+    .OUTPUTS
+        [string[]] 準備要匯出的函式名稱清單。
+
+    .EXAMPLE
+        Get-PowerShellFunctions -Scripts (Get-PowerShellScripts -FolderPath "C:\Scripts")
+    #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)] [array]$Scripts
+        [Parameter(Mandatory = $true)]
+        [array]$Scripts
     )
 
     $ExportList = @()
@@ -75,18 +95,32 @@ function GetAllPowershellFunctions{
     return $ExportList
 }
 
-<#
-.SYNOPSIS
-    尋找所有子模組 (.psm1) 並轉換為供 psd1 使用的相對路徑清單
-.PARAMETER ModuleDir
-    模組的根目錄路徑
-.OUTPUTS
-    [string[]] 巢狀模組的相對路徑清單
-#>
-function GetNestedModulesList{
+function Get-NestedModulesList {
+    <#
+    .SYNOPSIS
+        取得所有子模組的相對路徑清單，供 psd1 使用。
+
+    .DESCRIPTION
+        搜尋指定模組目錄下所有 .psm1 檔案，並轉換為相對路徑清單。
+
+    .PARAMETER ModuleDir
+        模組的根目錄路徑。
+
+    .PARAMETER IgnoreList
+        要忽略的子模組檔名清單。
+
+    .OUTPUTS
+        [string[]] 巢狀模組的相對路徑清單。
+
+    .EXAMPLE
+        Get-NestedModulesList -ModuleDir "C:\Repo\MyModule"
+    #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)] [string]$ModuleDir,
-        [Parameter(Mandatory = $false)] [string[]]$IgnoreList
+        [Parameter(Mandatory = $true)]
+        [string]$ModuleDir,
+        [Parameter(Mandatory = $false)]
+        [string[]]$IgnoreList
     )
 
     # 掃描所有的子模組 (.psm1) 來自動更新 NestedModules
@@ -112,25 +146,34 @@ function GetNestedModulesList{
     return $NestedModulesList
 }
 
-<#
-.SYNOPSIS
-    檢查包含 .ps1 腳本的子目錄，若缺乏對應的 .psm1 則自動建立該子模組檔案
-    
-.PARAMETER ModuleDir
-    模組的根目錄絕對路徑。用於比對以確保不會在根目錄下建立子模組
+function New-SubmoduleFile {
+    <#
+    .SYNOPSIS
+        檢查子目錄是否有對應的 .psm1 檔案，若缺少則自動建立。
 
-.PARAMETER Scripts
-    所有被掃描到的腳本檔案陣列（通常為 Get-ChildItem 取得的 FileInfo 陣列）
+    .DESCRIPTION
+        針對包含 .ps1 檔案的子目錄，若缺乏對應的子模組檔案，則自動建立 .psm1 檔案。
 
-.PARAMETER Prefix
-    選用參數。自訂生成的 .psm1 檔案名稱前綴，後面會接上資料夾名稱
-    若未提供或為空字串，預設使用資料夾名稱作為 .psm1 名稱
-#>
-function GenPsm1{
+    .PARAMETER ModuleDir
+        模組的根目錄絕對路徑，用於避免在根目錄下建立子模組。
+
+    .PARAMETER Scripts
+        所有被掃描到的腳本檔案陣列。
+
+    .PARAMETER Prefix
+        可選的 .psm1 檔案名稱前綴，後面會接上資料夾名稱。
+
+    .EXAMPLE
+        New-SubmoduleFile -ModuleDir "C:\Repo\MyModule" -Scripts (Get-PowerShellScripts -FolderPath "C:\Repo\MyModule")
+    #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)] [string]$ModuleDir,
-        [Parameter(Mandatory = $true)] [array]$Scripts,
-        [Parameter(Mandatory = $false)] [string]$Prefix
+        [Parameter(Mandatory = $true)]
+        [string]$ModuleDir,
+        [Parameter(Mandatory = $true)]
+        [array]$Scripts,
+        [Parameter(Mandatory = $false)]
+        [string]$Prefix
     )
 
     $ScriptGroups = $Scripts | Group-Object DirectoryName
@@ -154,7 +197,7 @@ function GenPsm1{
                 # 定義標準的子模組載入邏輯
                 $Psm1Content = @"
 # ======================================================================
-# 自動產生的子模組檔案 ($Psm1Name)
+# Automatically generated submodule file ($Psm1Name)
 # ======================================================================
 `$ScriptFiles = Get-ChildItem -Path `$PSScriptRoot -Filter "*.ps1"
 
@@ -171,16 +214,39 @@ Export-ModuleMember -Function *
     }
 }
 
-<#
-.SYNOPSIS
-    檢查主模組清單檔 (.psd1) 是否存在，若不存在則初始化一個基底檔案
-#>
-function GenPsd1{
+function New-ModuleManifestFile {
+    <#
+    .SYNOPSIS
+        確認主模組清單檔 (.psd1) 是否存在，若不存在則建立基底檔案。
+
+    .DESCRIPTION
+        若指定的 manifest 檔案不存在，會建立新的 PowerShell module manifest。
+
+    .PARAMETER ManifestPath
+        要建立或更新的 .psd1 檔案路徑。
+
+    .PARAMETER Author
+        模組作者名稱。
+
+    .PARAMETER Description
+        模組描述。
+
+    .PARAMETER Version
+        模組版本號。
+
+    .EXAMPLE
+        New-ModuleManifestFile -ManifestPath "C:\Repo\MyModule\MyModule.psd1" -Author "Sean" -Description "My module" -Version "1.0.0"
+    #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)] [string]$ManifestPath,
-        [Parameter(Mandatory = $true)] [string]$Author,
-        [Parameter(Mandatory = $true)] [string]$Description,
-        [Parameter(Mandatory = $true)] [string]$Version
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$Author,
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+        [Parameter(Mandatory = $true)]
+        [string]$Version
     )
 
     # 檢查並建立基底 Manifest
@@ -192,29 +258,29 @@ function GenPsd1{
     }
 }
 
-<#
-.SYNOPSIS
-    批次載入指定的 .NET DLL 檔案
+function Import-DllLibraries {
+    <#
+    .SYNOPSIS
+        批次載入指定的 .NET DLL 檔案。
 
-.DESCRIPTION
-    此函式會掃描指定目錄下的 DLL 檔案清單，並使用 Add-Type 將其載入至目前的 PowerShell 工作階段中
+    .DESCRIPTION
+        掃描指定目錄下的 DLL 檔案，並使用 Add-Type 將其載入目前的 PowerShell 工作階段中。
 
-.PARAMETER LibraryPath
-    存放 DLL 檔案的資料夾路徑
+    .PARAMETER LibraryPath
+        存放 DLL 檔案的資料夾路徑。
 
-.PARAMETER DllNames
-    要載入的 DLL 檔案名稱清單（陣列）
-    如果未指定，則會載入 LibraryPath 資料夾下的所有 DLL 檔案
+    .PARAMETER DllNames
+        要載入的 DLL 檔案名稱清單。若未指定，則會載入 LibraryPath 下的所有 DLL 檔案。
 
-.EXAMPLE
-    ImportDllLibraries -LibraryPath "C:\libs" -DllNames @("A.dll", "B.dll")
-    說明：從 C:\libs 載入 A.dll 與 B.dll
-#>
-function ImportDllLibraries {
+    .EXAMPLE
+        Import-DllLibraries -LibraryPath "C:\libs" -DllNames @("A.dll", "B.dll")
+    #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)] [string]$LibraryPath,
-        [Parameter(Mandatory = $false)] [array]$DllNames = @()
+        [Parameter(Mandatory = $true)]
+        [string]$LibraryPath,
+        [Parameter(Mandatory = $false)]
+        [array]$DllNames = @()
     )
 
     <#
