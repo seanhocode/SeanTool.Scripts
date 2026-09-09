@@ -268,6 +268,22 @@ function New-CopyResult {
 
     .EXAMPLE
         New-CopyResult -SuccessFileList $Success -NotFoundFileList $Missing -ResultFilePath "C:\Logs\CopyReport"
+
+    .EXAMPLE
+        $CopyFileList = @()
+        $CopyFileList += ,@("C:\Data\File1.txt", "C:\Backup\File1.txt")
+        $CopyFileList += ,@("C:\Data\Missing.txt", "C:\Backup\Missing.txt")
+        
+        $CopyResult = Copy-File -CopyFileList $CopyFileList
+
+        $copyResultParams = @{
+            SuccessFileList = $CopyResult.SuccessFileList
+            NotFoundFileList = $CopyResult.NotFoundFileList
+            ErrorFileList = $CopyResult.ErrorFileList
+            ResultFilePath = $TargetPath
+        }
+
+        New-CopyResult @copyResultParams
     #>
     param (
         [object[][]]$SuccessFileList,
