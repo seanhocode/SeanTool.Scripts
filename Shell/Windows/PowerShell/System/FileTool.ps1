@@ -437,6 +437,67 @@ function Get-FolderFileList {
     }
 }
 
+function Compare-FolderFiles {
+    <#
+    .SYNOPSIS
+        比對兩個資料夾的檔案清單，輸出差異與相同檔案報表。
+
+    .PARAMETER SourcePath
+        來源資料夾路徑。
+
+    .PARAMETER TargetPath
+        目標資料夾路徑。
+
+    .PARAMETER OutputPath
+        Diff.txt 與 MatchFiles.txt 的輸出資料夾，預設為目前資料夾。
+
+    .EXAMPLE
+        Compare-FolderFiles -SourcePath "C:\Build\WebRoot" -TargetPath "D:\Released\WebRoot" -OutputPath "C:\Report"
+    #>
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateScript({
+            if (Test-Path -LiteralPath $_ -PathType Container) { $true }
+            else { throw "找不到資料夾: $_" }
+        })]
+        [string]$SourcePath,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateScript({
+            if (Test-Path -LiteralPath $_ -PathType Container) { $true }
+            else { throw "找不到資料夾: $_" }
+        })]
+        [string]$TargetPath,
+
+        [string]$OutputPath = "."
+    )
+
+    $sourceRoot = (Get-Item -LiteralPath $SourcePath).FullName.TrimEnd('\')
+    $targetRoot = (Get-Item -LiteralPath $TargetPath).FullName.TrimEnd('\')
+
+    $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File |
+        ForEach-Object { $_.FullName.Substring($sourceRoot.Length).TrimStart('\') } |
+        Sort-Object)
+    $targetFiles = @(Get-ChildItem -LiteralPath $targetRoot -Recurse -File |
+        ForEach-Object { $_.FullName.Substring($targetRoot.Length).TrimStart('\') } |
+        Sort-Object)
+
+    $differences = Compare-Object -ReferenceObject $sourceFiles -DifferenceObject $targetFiles
+    $diffLines = @($differences | ForEach-Object {
+        if ($_.SideIndicator -eq '<=') { "只出現在 Source: $($_.InputObject)" }
+        else { "只出現在 Target: $($_.InputObject)" }
+    })
+    $matchFiles = @($sourceFiles | Where-Object { $targetFiles -contains $_ })
+
+    if (-not (Test-Path -LiteralPath $OutputPath -PathType Container)) {
+        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+    }
+
+    $outputRoot = (Get-Item -LiteralPath $OutputPath).FullName
+    $diffLines | Out-File -LiteralPath (Join-Path $outputRoot "Diff.txt") -Encoding utf8
+    $matchFiles | Out-File -LiteralPath (Join-Path $outputRoot "MatchFiles.txt") -Encoding utf8
+}
+
 function Merge-Files {
     <#
     .SYNOPSIS
