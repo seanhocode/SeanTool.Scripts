@@ -102,9 +102,21 @@ function Get-GitCommitSubjectBySha {
     process {
         if (-not $Sha) { return @() }
 
-        Push-Location $RepoPath
-        git log --no-walk --pretty=format:"%s" $Sha
-        Pop-Location
+        # 備份目前的 Console 編碼
+        $OriginalEncoding = [Console]::OutputEncoding
+        
+        try {
+            # 強制將編碼設為 UTF-8，以正確接收 Git 輸出的中文
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            
+            Push-Location $RepoPath
+            git log --no-walk --pretty=format:"%s" $Sha
+        }
+        finally {
+            Pop-Location
+            # 執行完畢後還原編碼，避免影響其他腳本
+            [Console]::OutputEncoding = $OriginalEncoding
+        }
     }
 }
 
@@ -114,12 +126,13 @@ function Get-GitDiffFiles {
         依指定的 Commit SHA 清單取得最終有異動的檔案清單（如 TortoiseGit 的 Compare Revisions）
 
     .DESCRIPTION
-        以實際祖先關係（git merge-base --is-ancestor）在 Sha 清單中找出最舊與最新的 Commit
-        取最舊 Commit 的父 Commit 與最新 Commit 做單次 git diff
-        因為是比對頭尾兩個 Commit 的最終樹狀態，若某檔案在區間內先異動又被還原，diff 不會列出該檔案
-        Sha 清單順序不拘；不使用 Commit 時間排序，避免同秒 Commit 或 rebase 導致時間不連續時判斷錯誤
-        輸出的路徑會自動將 Git 的正斜線 (/) 轉換為 Windows 的反斜線 (\)
+        以實際祖先關係（git merge-base --is-ancestor）在 Sha 清單中找出最舊與最新的 Commit，
+        取最舊 Commit 的父 Commit 與最新 Commit 做單次 git diff，
+        Sha 清單順序不拘；不使用 Commit 時間排序，避免同秒 Commit 或 rebase 導致時間不連續時判斷錯誤，
 
+        須注意:
+            1. 因為是比對頭尾兩個 Commit 的最終樹狀態，若某檔案在區間內先異動又被還原，diff 不會列出該檔案
+            2. 因是抓最舊與最新 Commit 的差異，如果刪掉中間某個 Commit，該 commit 的異動還是會被算入
     .PARAMETER Sha
         必要的參數。Commit SHA 清單，順序不拘，通常來自 Get-GitCommitShaInRange 的回傳結果
 
@@ -185,7 +198,7 @@ function Get-GitDiffFiles {
     }
 }
 
-function Get-GitDiffFilesOld {
+function Get-GitDiffFilesSimple {
     <#
     .SYNOPSIS
         取得兩個 Git Log 之間差異檔案清單
@@ -256,6 +269,94 @@ function Get-GitDiffFilesOld {
         Pop-Location
 
         return $Files
+    }
+}
+
+function Get-GitDiffFilesExact {
+    <#
+    .SYNOPSIS
+        依指定的 Commit SHA 清單，取得這些 Commit 所異動的檔案清單
+
+    .DESCRIPTION
+        採用「單一 Commit 獨立比對後取聯集」的作法
+
+        1. 如果一個連續的 commit 清單中移除了某個中間的 Commit，該 Commit 的異動檔案就不會被列出
+        2. 只要異動過的檔案都會被列出: 如果某檔案在指定的 Commit 中被異動過，即使它在後續的 Commit 被改回原本的樣子，它依然會出現在清單中
+        3. 無視順序與時間: 不需要排列 Commit 順序，會獨立處理每一筆 SHA
+
+    .PARAMETER Sha
+        必要的參數。Commit SHA 清單，順序不拘，通常來自 Get-GitCommitShaInRange 等函數的回傳結果
+
+    .PARAMETER Filter
+        選用參數。用於過濾特定的目錄或副檔名
+        例如："SQL/*" 或 "*.cs"
+
+    .PARAMETER RepoPath
+        選用參數。Git 儲存庫的路徑，預設為當前腳本所在的目錄
+
+    .PARAMETER FormatOutputPath
+        是否將輸出路徑的正斜線 (/) 取代為反斜線 (\)，預設為 $true
+
+    .EXAMPLE
+        $ShaList = @("CommitA_SHA", "CommitB_SHA", "CommitD_SHA") # 故意跳過 CommitC
+        $files = Get-GitDiffFilesExact -Sha $ShaList -RepoPath $RepoPath
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)] [string[]]$Sha,
+        [Parameter(Mandatory = $false)] [string]$Filter,
+        [Parameter(Mandatory = $false)] [string]$RepoPath,
+        [Parameter(Mandatory = $false)] [switch]$FormatOutputPath = $true
+    )
+
+    process {
+        if (-not $Sha) { return @() }
+
+        if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+            $RepoPath = $PSScriptRoot
+        }
+
+        # 為了確保切換路徑出錯時能正常復原，使用 try-finally 包覆
+        Push-Location $RepoPath
+        try {
+            # 確保 Git 處理路徑時不進行轉義（解決中文路徑顯示亂碼）
+            git config --global core.quotepath false
+            # 設定 PowerShell 輸出編碼為 UTF8 以正確處理中文字元
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+            # 將所有 Commit 異動的檔案集中到這個陣列 (利用 PowerShell 迴圈指派效能較佳)
+            $AllFiles = foreach ($s in $Sha) {
+                
+                # git diff-tree 說明:
+                # --no-commit-id: 不要輸出 commit SHA，純輸出結果
+                # --name-only: 只顯示檔名
+                # -r: 遞迴進入子目錄 (否則遇到資料夾異動只會顯示資料夾)
+                # 這裡使用底層指令 (plumbing) diff-tree，能最精確且乾淨地抓取單一 commit 異動
+                $GitArgs = @("diff-tree", "--no-commit-id", "--name-only", "-r", $s)
+
+                if (-not [string]::IsNullOrWhiteSpace($Filter)) {
+                    $GitArgs += "--"
+                    $GitArgs += $Filter
+                }
+
+                # 執行並回傳該 Commit 的檔案清單
+                & git $GitArgs
+            }
+
+            # 1. 排除空字串 (避免因某些 commit 沒有符合的異動檔而產生空行)
+            # 2. 去除重複檔案 (多個 commit 可能改到同一個檔案，聯集後只需列出一次)
+            $UniqueFiles = $AllFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+            # 依需求轉換路徑斜線
+            if ($FormatOutputPath) { 
+                $UniqueFiles = $UniqueFiles | ForEach-Object { $_.Replace('/', '\') } 
+            }
+
+            return $UniqueFiles
+        }
+        finally {
+            Pop-Location
+        }
     }
 }
 
